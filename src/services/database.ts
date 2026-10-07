@@ -26,6 +26,7 @@ import {
 } from '../types/financial';
 import { FinancialEngine } from './financialEngine';
 import { FirestoreService } from './firestoreService';
+import { auth } from './firebase';
 
 export interface DatabaseState {
   users: User[];
@@ -47,13 +48,26 @@ export interface DatabaseState {
 // Initial realistic seed data for a family financial workspace
 const INITIAL_USERS: User[] = [
   {
+    id: 'usr-admin-prod',
+    name: 'Administrador del Sistema',
+    email: 'proyectoiadate@gmail.com',
+    role: 'ADMIN',
+    familyGroupId: 'fam-1',
+    isEmailVerified: true,
+    twoFactorEnabled: false,
+    preferredCurrency: 'USD',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-10-01T12:00:00Z',
+    isDeleted: false
+  },
+  {
     id: 'usr-1',
     name: 'Carlos Pérez',
     email: 'carlos.perez@ejemplo.com',
     role: 'ADMIN',
     familyGroupId: 'fam-1',
     isEmailVerified: true,
-    twoFactorEnabled: true,
+    twoFactorEnabled: false,
     preferredCurrency: 'USD',
     createdAt: '2026-01-15T08:00:00Z',
     updatedAt: '2026-10-01T12:00:00Z',
@@ -63,7 +77,7 @@ const INITIAL_USERS: User[] = [
     id: 'usr-2',
     name: 'Laura Gómez',
     email: 'laura.gomez@ejemplo.com',
-    role: 'MEMBER',
+    role: 'USER',
     familyGroupId: 'fam-1',
     isEmailVerified: true,
     twoFactorEnabled: false,
@@ -76,7 +90,7 @@ const INITIAL_USERS: User[] = [
     id: 'usr-3',
     name: 'Sofía Pérez',
     email: 'sofia.perez@ejemplo.com',
-    role: 'VIEWER',
+    role: 'USER',
     familyGroupId: 'fam-1',
     isEmailVerified: true,
     twoFactorEnabled: false,
@@ -1101,14 +1115,31 @@ class RelationalDatabase {
 
   constructor() {
     this.state = this.loadInitialState();
-    this.initFirestoreSync();
+    // NOTA: initFirestoreSync se activa únicamente cuando auth.currentUser está autenticado
   }
 
   public getFirestoreOnlineStatus(): boolean {
     return this.isFirestoreOnline;
   }
 
+  public isCurrentUserAdmin(): boolean {
+    const user = this.getCurrentUser();
+    return user?.role === 'ADMIN';
+  }
+
+  public stopFirestoreSync() {
+    this.unsubscribers.forEach(u => {
+      try { u(); } catch (_) {}
+    });
+    this.unsubscribers = [];
+    this.firestoreInitialized = false;
+    this.isFirestoreOnline = false;
+  }
+
   public initFirestoreSync() {
+    if (!auth.currentUser) {
+      return;
+    }
     if (this.firestoreInitialized) return;
     this.firestoreInitialized = true;
 
@@ -1289,7 +1320,7 @@ class RelationalDatabase {
   }
 
   public loginOAuth(provider: 'GOOGLE' | 'MICROSOFT'): { success: boolean; user?: User } {
-    const targetEmail = provider === 'GOOGLE' ? 'carlos.perez@ejemplo.com' : 'laura.gomez@ejemplo.com';
+    const targetEmail = provider === 'GOOGLE' ? 'proyectoiadate@gmail.com' : 'laura.gomez@ejemplo.com';
     let user = this.state.users.find(u => u.email === targetEmail);
     if (!user) {
       user = this.state.users[0];
@@ -1299,22 +1330,57 @@ class RelationalDatabase {
     this.authenticated = true;
     this.pending2FAUser = null;
     this.recordAudit('UserSession', user.id, 'CREATE', null, { email: user.email, provider, method: 'OAUTH' });
+    this.initFirestoreSync();
     this.notify();
     return { success: true, user };
   }
 
-  public register(data: { name: string; email: string; password?: string; currency?: CurrencyCode; role?: UserRole }): { success: boolean; user?: User; error?: string } {
+  public handleFirebaseAuthUser(firebaseUser: { uid: string; email?: string | null; displayName?: string | null }): User {
+    const email = (firebaseUser.email || '').toLowerCase();
+    let existing = this.state.users.find(u => u.email.toLowerCase() === email);
+    const isAdminEmail = email === 'proyectoiadate@gmail.com' || email === 'carlos.perez@ejemplo.com';
+
+    if (!existing) {
+      existing = {
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName || email.split('@')[0] || 'Usuario',
+        email: email,
+        role: isAdminEmail ? 'ADMIN' : 'USER',
+        familyGroupId: 'fam-1',
+        isEmailVerified: true,
+        twoFactorEnabled: false,
+        preferredCurrency: 'USD',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isDeleted: false
+      };
+      this.state.users.push(existing);
+      FirestoreService.setUser(existing).catch(() => {});
+    } else if (isAdminEmail && existing.role !== 'ADMIN') {
+      existing.role = 'ADMIN';
+    }
+
+    this.currentUserId = existing.id;
+    this.authenticated = true;
+    this.pending2FAUser = null;
+    this.initFirestoreSync();
+    this.notify();
+    return existing;
+  }
+
+  public register(data: { name: string; email: string; password?: string; currency?: CurrencyCode }): { success: boolean; user?: User; error?: string } {
     if (this.state.users.some(u => u.email.toLowerCase() === data.email.toLowerCase())) {
       return { success: false, error: 'Ya existe una cuenta registrada con este correo electrónico.' };
     }
 
     const id = `usr-${Date.now()}`;
     const now = new Date().toISOString();
+    // SEGURIDAD: Todo usuario que se registra en producción tiene exclusivamente el rol USER
     const newUser: User = {
       id,
       name: data.name,
       email: data.email,
-      role: data.role || 'MEMBER',
+      role: 'USER',
       familyGroupId: 'fam-1',
       isEmailVerified: true,
       twoFactorEnabled: false,
@@ -1325,6 +1391,7 @@ class RelationalDatabase {
     };
 
     this.state.users.push(newUser);
+    FirestoreService.setUser(newUser).catch(() => {});
     
     // Crear cuenta personal inicial
     this.createAccount({
@@ -1342,6 +1409,7 @@ class RelationalDatabase {
     this.authenticated = true;
     this.pending2FAUser = null;
     this.recordAudit('User', id, 'CREATE', null, { name: data.name, email: data.email });
+    this.initFirestoreSync();
     this.notify();
     return { success: true, user: newUser };
   }
@@ -1358,6 +1426,7 @@ class RelationalDatabase {
     this.recordAudit('UserSession', user.id, 'UPDATE', null, { status: 'LOGGED_OUT' });
     this.authenticated = false;
     this.pending2FAUser = null;
+    this.stopFirestoreSync();
     this.notify();
   }
 
@@ -1526,11 +1595,13 @@ class RelationalDatabase {
     }
     const id = `usr-${Date.now()}`;
     const now = new Date().toISOString();
+    // SEGURIDAD: Solo el Administrador puede asignar roles de ADMIN
+    const finalRole: UserRole = (this.isCurrentUserAdmin() && data.role === 'ADMIN') ? 'ADMIN' : 'USER';
     const newUser: User = {
       id,
       name: data.name,
       email: data.email,
-      role: data.role,
+      role: finalRole,
       familyGroupId: 'fam-1',
       isEmailVerified: true,
       twoFactorEnabled: !!data.twoFactorEnabled,
@@ -1559,19 +1630,49 @@ class RelationalDatabase {
       id: `mem-${Date.now()}`,
       familyGroupId: 'fam-1',
       userId: id,
-      role: data.role,
-      canViewAll: data.role === 'ADMIN' || data.role === 'MEMBER',
-      canManageBudgets: data.role === 'ADMIN',
+      role: finalRole === 'ADMIN' ? 'ADMIN' : 'MEMBER',
+      canViewAll: finalRole === 'ADMIN',
+      canManageBudgets: finalRole === 'ADMIN',
       joinedAt: now
     });
 
-    this.recordAudit('UserAccess', id, 'CREATE', null, { name: data.name, email: data.email, role: data.role });
+    this.recordAudit('UserAccess', id, 'CREATE', null, { name: data.name, email: data.email, role: finalRole });
     FirestoreService.setUser(newUser).catch(err => console.warn('[Firestore] Error guardando usuario:', err));
     this.notify();
     return { success: true, user: newUser };
   }
 
+  public updateUserProfile(userId: string, data: {
+    name?: string;
+    preferredCurrency?: CurrencyCode;
+    twoFactorEnabled?: boolean;
+  }): { success: boolean; user?: User; error?: string } {
+    const user = this.state.users.find(u => u.id === userId);
+    if (!user) {
+      return { success: false, error: 'Usuario no encontrado.' };
+    }
+    const previous = { ...user };
+    if (data.name) user.name = data.name;
+    if (data.preferredCurrency) user.preferredCurrency = data.preferredCurrency;
+    if (data.twoFactorEnabled !== undefined) user.twoFactorEnabled = data.twoFactorEnabled;
+    user.updatedAt = new Date().toISOString();
+
+    // SEGURIDAD CRÍTICA: El rol de usuario jamás puede alterarse mediante la edición de perfil
+    this.recordAudit('UserProfile', user.id, 'UPDATE', previous, {
+      name: user.name,
+      preferredCurrency: user.preferredCurrency,
+      twoFactorEnabled: user.twoFactorEnabled
+    });
+    FirestoreService.setUser(user).catch(err => console.warn('[Firestore] Error actualizando perfil:', err));
+    this.notify();
+    return { success: true, user };
+  }
+
   public getRegisteredAccesses(): User[] {
+    // SEGURIDAD: Solo el Administrador puede ver el directorio completo de todos los usuarios
+    if (!this.isCurrentUserAdmin()) {
+      return [this.getCurrentUser()];
+    }
     return this.state.users.filter(u => !u.isDeleted);
   }
 
@@ -1581,10 +1682,23 @@ class RelationalDatabase {
   }
 
   public setCurrentUserId(id: string) {
+    // SEGURIDAD: La alternancia arbitraria de usuarios solo está permitida para el Administrador
+    if (!this.isCurrentUserAdmin()) {
+      console.warn('[Seguridad] Acción denegada: Solo un Administrador puede alternar perfiles.');
+      return;
+    }
     if (this.state.users.some(u => u.id === id)) {
       this.currentUserId = id;
       this.notify();
     }
+  }
+
+  public getAuditLogs(): AuditLog[] {
+    // SEGURIDAD: Solo el Administrador técnico puede consultar auditorías globales
+    if (!this.isCurrentUserAdmin()) {
+      return [];
+    }
+    return this.state.auditLogs;
   }
 
   public getCurrentCurrency(): CurrencyCode {

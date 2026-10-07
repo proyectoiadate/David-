@@ -19,7 +19,7 @@ import {
   orderBy,
   Unsubscribe
 } from 'firebase/firestore';
-import { firestore, handleFirestoreError, OperationType } from './firebase';
+import { firestore, auth, handleFirestoreError, OperationType } from './firebase';
 import {
   Account,
   CreditCard,
@@ -58,10 +58,23 @@ export class FirestoreService {
     }
   }
 
+  public static isCurrentUserAdmin(): boolean {
+    const user = auth.currentUser;
+    if (!user) return false;
+    const email = (user.email || '').toLowerCase();
+    return email === 'proyectoiadate@gmail.com' || email === 'carlos.perez@ejemplo.com';
+  }
+
   static subscribeUsers(onData: (users: User[]) => void): Unsubscribe {
+    const user = auth.currentUser;
+    if (!user) return () => {};
     const path = 'users';
+    const q = this.isCurrentUserAdmin()
+      ? collection(firestore, path)
+      : query(collection(firestore, path), where('id', '==', user.uid));
+
     return onSnapshot(
-      collection(firestore, path),
+      q,
       (snapshot) => {
         const list: User[] = [];
         snapshot.forEach(docSnap => {
@@ -70,7 +83,9 @@ export class FirestoreService {
         onData(list);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, path);
+        try {
+          handleFirestoreError(error, OperationType.LIST, path);
+        } catch (_) {}
       }
     );
   }
@@ -125,9 +140,15 @@ export class FirestoreService {
   }
 
   static subscribeAccounts(onData: (accounts: Account[]) => void): Unsubscribe {
+    const user = auth.currentUser;
+    if (!user) return () => {};
     const path = 'accounts';
+    const q = this.isCurrentUserAdmin()
+      ? collection(firestore, path)
+      : query(collection(firestore, path), where('userId', '==', user.uid));
+
     return onSnapshot(
-      collection(firestore, path),
+      q,
       (snapshot) => {
         const list: Account[] = [];
         snapshot.forEach(docSnap => {
@@ -136,7 +157,9 @@ export class FirestoreService {
         onData(list);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, path);
+        try {
+          handleFirestoreError(error, OperationType.LIST, path);
+        } catch (_) {}
       }
     );
   }
@@ -191,9 +214,15 @@ export class FirestoreService {
   }
 
   static subscribeCreditCards(onData: (cards: CreditCard[]) => void): Unsubscribe {
+    const user = auth.currentUser;
+    if (!user) return () => {};
     const path = 'creditCards';
+    const q = this.isCurrentUserAdmin()
+      ? collection(firestore, path)
+      : query(collection(firestore, path), where('userId', '==', user.uid));
+
     return onSnapshot(
-      collection(firestore, path),
+      q,
       (snapshot) => {
         const list: CreditCard[] = [];
         snapshot.forEach(docSnap => {
@@ -202,7 +231,9 @@ export class FirestoreService {
         onData(list);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, path);
+        try {
+          handleFirestoreError(error, OperationType.LIST, path);
+        } catch (_) {}
       }
     );
   }
@@ -257,9 +288,15 @@ export class FirestoreService {
   }
 
   static subscribeDebts(onData: (debts: Debt[]) => void): Unsubscribe {
+    const user = auth.currentUser;
+    if (!user) return () => {};
     const path = 'debts';
+    const q = this.isCurrentUserAdmin()
+      ? collection(firestore, path)
+      : query(collection(firestore, path), where('userId', '==', user.uid));
+
     return onSnapshot(
-      collection(firestore, path),
+      q,
       (snapshot) => {
         const list: Debt[] = [];
         snapshot.forEach(docSnap => {
@@ -268,7 +305,9 @@ export class FirestoreService {
         onData(list);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, path);
+        try {
+          handleFirestoreError(error, OperationType.LIST, path);
+        } catch (_) {}
       }
     );
   }
@@ -323,9 +362,15 @@ export class FirestoreService {
   }
 
   static subscribeTransactions(onData: (txs: Transaction[]) => void): Unsubscribe {
+    const user = auth.currentUser;
+    if (!user) return () => {};
     const path = 'transactions';
+    const q = this.isCurrentUserAdmin()
+      ? collection(firestore, path)
+      : query(collection(firestore, path), where('userId', '==', user.uid));
+
     return onSnapshot(
-      collection(firestore, path),
+      q,
       (snapshot) => {
         const list: Transaction[] = [];
         snapshot.forEach(docSnap => {
@@ -336,7 +381,9 @@ export class FirestoreService {
         onData(list);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, path);
+        try {
+          handleFirestoreError(error, OperationType.LIST, path);
+        } catch (_) {}
       }
     );
   }
@@ -387,9 +434,15 @@ export class FirestoreService {
   }
 
   static subscribeBudgets(onData: (budgets: Budget[]) => void): Unsubscribe {
+    const user = auth.currentUser;
+    if (!user) return () => {};
     const path = 'budgets';
+    const q = this.isCurrentUserAdmin()
+      ? collection(firestore, path)
+      : query(collection(firestore, path), where('userId', '==', user.uid));
+
     return onSnapshot(
-      collection(firestore, path),
+      q,
       (snapshot) => {
         const list: Budget[] = [];
         snapshot.forEach(docSnap => {
@@ -398,7 +451,9 @@ export class FirestoreService {
         onData(list);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, path);
+        try {
+          handleFirestoreError(error, OperationType.LIST, path);
+        } catch (_) {}
       }
     );
   }
@@ -449,9 +504,15 @@ export class FirestoreService {
   }
 
   static subscribeGoals(onData: (goals: Goal[]) => void): Unsubscribe {
+    const user = auth.currentUser;
+    if (!user) return () => {};
     const path = 'goals';
+    const q = this.isCurrentUserAdmin()
+      ? collection(firestore, path)
+      : query(collection(firestore, path), where('userId', '==', user.uid));
+
     return onSnapshot(
-      collection(firestore, path),
+      q,
       (snapshot) => {
         const list: Goal[] = [];
         snapshot.forEach(docSnap => {
@@ -460,7 +521,9 @@ export class FirestoreService {
         onData(list);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, path);
+        try {
+          handleFirestoreError(error, OperationType.LIST, path);
+        } catch (_) {}
       }
     );
   }
@@ -477,6 +540,9 @@ export class FirestoreService {
     goals: Goal[];
     transactions: Transaction[];
   }): Promise<boolean> {
+    if (!this.isCurrentUserAdmin()) {
+      return false;
+    }
     try {
       const accSnap = await getDocs(collection(firestore, 'accounts'));
       if (!accSnap.empty) {

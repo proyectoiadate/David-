@@ -8,7 +8,7 @@
         "id": { "type": "string", "maxLength": 128 },
         "name": { "type": "string", "maxLength": 100 },
         "email": { "type": "string", "maxLength": 150 },
-        "role": { "type": "string", "enum": ["ADMIN", "MEMBER", "VIEWER"] },
+        "role": { "type": "string", "enum": ["USER", "ADMIN"] },
         "familyGroupId": { "type": "string", "maxLength": 128 },
         "isEmailVerified": { "type": "boolean" },
         "twoFactorEnabled": { "type": "boolean" },

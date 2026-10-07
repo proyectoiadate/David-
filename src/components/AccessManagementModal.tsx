@@ -28,14 +28,15 @@ export const AccessManagementModal: React.FC<AccessManagementModalProps> = ({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('MEMBER');
+  const [role, setRole] = useState<UserRole>('USER');
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
   const [initialBalance, setInitialBalance] = useState('200');
   const [twoFactor, setTwoFactor] = useState(false);
 
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  if (!isOpen) return null;
+  // SEGURIDAD CRÍTICA: Solo un usuario con rol explícito ADMIN puede acceder a este componente
+  if (!isOpen || !db.isCurrentUserAdmin()) return null;
 
   const users = db.getRegisteredAccesses();
   const currentUser = db.getCurrentUser();
@@ -279,11 +280,10 @@ export const AccessManagementModal: React.FC<AccessManagementModalProps> = ({
                   <select
                     value={role}
                     onChange={e => setRole(e.target.value as UserRole)}
-                    className="w-full px-2.5 py-2 border border-neutral-300 rounded-lg"
+                    className="w-full px-2.5 py-2 border border-neutral-300 rounded-lg text-xs"
                   >
-                    <option value="ADMIN">Administrador (Total)</option>
-                    <option value="MEMBER">Miembro Familiar</option>
-                    <option value="VIEWER">Lector / Hijo</option>
+                    <option value="USER">Usuario Estándar (USER)</option>
+                    <option value="ADMIN">Administrador del Sistema (ADMIN)</option>
                   </select>
                 </div>
 

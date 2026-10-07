@@ -4,7 +4,8 @@
  * Transactions, Budgets, Goals, Categories, Audit, Alerts, Tags, etc.
  */
 
-export type UserRole = 'ADMIN' | 'MEMBER' | 'VIEWER';
+export type UserRole = 'USER' | 'ADMIN';
+export type FamilyRole = 'ADMIN' | 'MEMBER' | 'VIEWER';
 export type VisibilityType = 'PRIVATE' | 'SHARED' | 'FAMILY';
 export type FinancialScope = 'PERSONAL' | 'FAMILY' | 'ALL';
 
@@ -111,7 +112,7 @@ export interface FamilyMember {
   id: string;
   familyGroupId: string;
   userId: string;
-  role: UserRole;
+  role: FamilyRole;
   canViewAll: boolean;
   canManageBudgets: boolean;
   joinedAt: string;

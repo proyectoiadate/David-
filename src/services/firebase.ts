@@ -5,7 +5,7 @@
  */
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { 
   getFirestore, 
   doc, 
@@ -102,6 +102,25 @@ export async function testConnection(): Promise<boolean> {
     // Si el documento no existe o da permisos denegados en test, la conexión con el servidor se completó
     return true;
   }
+}
+
+export async function signInWithGoogle() {
+  return await signInWithPopup(auth, googleProvider);
+}
+
+export async function ensureFirebaseAuthSession() {
+  if (auth.currentUser) return auth.currentUser;
+  try {
+    const cred = await signInAnonymously(auth);
+    return cred.user;
+  } catch (err) {
+    console.warn('[Firebase Auth] Anonymous sign in unavailable:', err);
+    return null;
+  }
+}
+
+export async function signOutFromFirebase() {
+  return await signOut(auth);
 }
 
 // Iniciar prueba de conectividad de fondo

@@ -21,6 +21,17 @@ service cloud.firestore {
       return resource.data;
     }
 
+    // Administrador verificado por backend (email administrativo o documento con rol ADMIN)
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'proyectoiadate@gmail.com' ||
+        request.auth.token.email == 'carlos.perez@ejemplo.com' ||
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid))) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN')
+      );
+    }
+
     // Comprueba si el usuario autenticado es dueño del registro
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
@@ -40,10 +51,19 @@ service cloud.firestore {
     // COLECCIÓN: USERS
     // -------------------------------------------------------------
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(userId);
-      allow update: if isSignedIn() && (request.auth.uid == userId || resource.data.id == userId);
-      allow delete: if isSignedIn() && request.auth.uid == userId;
+      // Un usuario solo puede leer su propio perfil; el ADMIN puede listar y leer todos
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      // Al registrarse, un usuario común NUNCA puede autoasignarse ADMIN (debe ser USER)
+      allow create: if isSignedIn() && isValidId(userId) && (
+        (incoming().role == 'USER' && incoming().id == request.auth.uid) ||
+        isAdmin()
+      );
+      // Un usuario solo puede actualizar su propio perfil y NO puede modificar su propio campo 'role'
+      allow update: if isSignedIn() && isValidId(userId) && (
+        (request.auth.uid == userId && incoming().role == existing().role) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
     }
 
     // -------------------------------------------------------------
@@ -52,19 +72,23 @@ service cloud.firestore {
     match /accounts/{accountId} {
       allow read: if isSignedIn() && (
         resource.data.userId == request.auth.uid ||
-        isFamilyResource()
+        isFamilyResource() ||
+        isAdmin()
       );
       allow create: if isSignedIn() && isValidId(accountId) && (
         incoming().userId == request.auth.uid ||
-        incoming().visibility in ['FAMILY', 'SHARED', 'PRIVATE']
+        incoming().visibility in ['FAMILY', 'SHARED', 'PRIVATE'] ||
+        isAdmin()
       );
       allow update: if isSignedIn() && isValidId(accountId) && (
         resource.data.userId == request.auth.uid ||
-        isFamilyResource()
+        isFamilyResource() ||
+        isAdmin()
       );
       allow delete: if isSignedIn() && isValidId(accountId) && (
         resource.data.userId == request.auth.uid ||
-        isFamilyResource()
+        isFamilyResource() ||
+        isAdmin()
       );
     }
 
@@ -74,11 +98,20 @@ service cloud.firestore {
     match /creditCards/{cardId} {
       allow read: if isSignedIn() && (
         resource.data.userId == request.auth.uid ||
-        isFamilyResource()
+        isFamilyResource() ||
+        isAdmin()
       );
       allow create: if isSignedIn() && isValidId(cardId);
-      allow update: if isSignedIn() && isValidId(cardId);
-      allow delete: if isSignedIn() && isValidId(cardId);
+      allow update: if isSignedIn() && isValidId(cardId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource() ||
+        isAdmin()
+      );
+      allow delete: if isSignedIn() && isValidId(cardId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource() ||
+        isAdmin()
+      );
     }
 
     // -------------------------------------------------------------
@@ -87,11 +120,20 @@ service cloud.firestore {
     match /debts/{debtId} {
       allow read: if isSignedIn() && (
         resource.data.userId == request.auth.uid ||
-        isFamilyResource()
+        isFamilyResource() ||
+        isAdmin()
       );
       allow create: if isSignedIn() && isValidId(debtId);
-      allow update: if isSignedIn() && isValidId(debtId);
-      allow delete: if isSignedIn() && isValidId(debtId);
+      allow update: if isSignedIn() && isValidId(debtId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource() ||
+        isAdmin()
+      );
+      allow delete: if isSignedIn() && isValidId(debtId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource() ||
+        isAdmin()
+      );
     }
 
     // -------------------------------------------------------------
@@ -100,11 +142,20 @@ service cloud.firestore {
     match /transactions/{transactionId} {
       allow read: if isSignedIn() && (
         resource.data.userId == request.auth.uid ||
-        isFamilyResource()
+        isFamilyResource() ||
+        isAdmin()
       );
       allow create: if isSignedIn() && isValidId(transactionId);
-      allow update: if isSignedIn() && isValidId(transactionId);
-      allow delete: if isSignedIn() && isValidId(transactionId);
+      allow update: if isSignedIn() && isValidId(transactionId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource() ||
+        isAdmin()
+      );
+      allow delete: if isSignedIn() && isValidId(transactionId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource() ||
+        isAdmin()
+      );
     }
 
     // -------------------------------------------------------------
@@ -113,11 +164,20 @@ service cloud.firestore {
     match /budgets/{budgetId} {
       allow read: if isSignedIn() && (
         resource.data.userId == request.auth.uid ||
-        isFamilyResource()
+        isFamilyResource() ||
+        isAdmin()
       );
       allow create: if isSignedIn() && isValidId(budgetId);
-      allow update: if isSignedIn() && isValidId(budgetId);
-      allow delete: if isSignedIn() && isValidId(budgetId);
+      allow update: if isSignedIn() && isValidId(budgetId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource() ||
+        isAdmin()
+      );
+      allow delete: if isSignedIn() && isValidId(budgetId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource() ||
+        isAdmin()
+      );
     }
 
     // -------------------------------------------------------------
@@ -126,24 +186,40 @@ service cloud.firestore {
     match /goals/{goalId} {
       allow read: if isSignedIn() && (
         resource.data.userId == request.auth.uid ||
-        isFamilyResource()
+        isFamilyResource() ||
+        isAdmin()
       );
       allow create: if isSignedIn() && isValidId(goalId);
-      allow update: if isSignedIn() && isValidId(goalId);
-      allow delete: if isSignedIn() && isValidId(goalId);
+      allow update: if isSignedIn() && isValidId(goalId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource() ||
+        isAdmin()
+      );
+      allow delete: if isSignedIn() && isValidId(goalId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource() ||
+        isAdmin()
+      );
     }
 
     // -------------------------------------------------------------
     // COLECCIÓN: ALERTS & AUDIT
     // -------------------------------------------------------------
     match /alerts/{alertId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow write: if isSignedIn() && isValidId(alertId);
     }
 
     match /auditLogs/{auditId} {
-      allow read: if isSignedIn();
+      // PROTECCIÓN CRÍTICA: Solo el Administrador técnico puede leer auditorías globales
+      allow read: if isAdmin();
       allow create: if isSignedIn() && isValidId(auditId);
+      allow update, delete: if false;
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false;
     }
   }
 }

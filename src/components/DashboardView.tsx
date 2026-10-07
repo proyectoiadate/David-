@@ -586,10 +586,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           </div>
 
           <button
-            onClick={() => onNavigate('analytics')}
+            onClick={() => onNavigate('reports')}
             className="w-full mt-2 py-2 px-3 text-xs font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors text-center"
           >
-            Abrir Motor Analítico IA →
+            Ver Reportes Financieros →
           </button>
         </div>
       </div>

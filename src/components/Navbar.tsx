@@ -13,7 +13,8 @@ import {
   Shield, 
   Layers,
   KeyRound,
-  UserPlus
+  UserPlus,
+  Settings
 } from 'lucide-react';
 import { db } from '../services/database';
 import { CurrencyCode, Alert, FinancialScope } from '../types/financial';
@@ -22,6 +23,7 @@ interface NavbarProps {
   onOpenNewTransaction: () => void;
   onOpenArchitectureDocs: () => void;
   onOpenAccessManagement?: () => void;
+  onOpenProfileSettings?: () => void;
   activeView: string;
 }
 
@@ -29,12 +31,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNewTransaction,
   onOpenArchitectureDocs,
   onOpenAccessManagement,
+  onOpenProfileSettings,
   activeView
 }) => {
   const [showAlertsDropdown, setShowAlertsDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const currentUser = db.getCurrentUser();
+  const isAdmin = db.isCurrentUserAdmin();
   const currentCurrency = db.getCurrentCurrency();
   const activeScope = db.getActiveScope();
   const allUsers = db.getState().users;
@@ -118,15 +122,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Zona 2 & 3: Controls & Primary Actions */}
       <div className="flex items-center gap-2 md:gap-3">
-        {/* Architecture Spec Button */}
-        <button
-          onClick={onOpenArchitectureDocs}
-          className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
-          title="Ver especificación arquitectónica completa"
-        >
-          <FileText className="w-3.5 h-3.5 text-neutral-600" />
-          <span>Arquitectura</span>
-        </button>
+        {/* Architecture Spec Button - Exclusivo Administrador */}
+        {isAdmin && (
+          <button
+            onClick={onOpenArchitectureDocs}
+            className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-neutral-800 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors border border-neutral-200"
+            title="Ver especificación arquitectónica del sistema (Admin)"
+          >
+            <FileText className="w-3.5 h-3.5 text-neutral-600" />
+            <span>Arquitectura</span>
+          </button>
+        )}
 
         {/* Currency Selector */}
         <div className="inline-flex rounded-lg border border-neutral-200 p-0.5 bg-neutral-50 text-xs">
@@ -145,14 +151,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           ))}
         </div>
 
-        {/* Botón Gestión de Accesos & Usuarios */}
-        {onOpenAccessManagement && (
+        {/* Botón Gestión de Accesos & Usuarios - Exclusivo Administrador */}
+        {isAdmin && onOpenAccessManagement && (
           <button
             onClick={onOpenAccessManagement}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-neutral-800 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
-            title="Gestionar y crear accesos de usuarios"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors border border-neutral-200"
+            title="Gestionar y crear accesos globales (Admin)"
           >
-            <KeyRound className="w-3.5 h-3.5 text-neutral-600" />
+            <KeyRound className="w-3.5 h-3.5 text-neutral-700" />
             <span className="hidden sm:inline">Gestionar Accesos</span>
           </button>
         )}
@@ -256,37 +262,58 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               </div>
 
-              <div className="text-[11px] text-neutral-400 px-2 py-1.5 font-medium mt-1">Cambiar de Usuario</div>
-              {allUsers.map(u => (
-                <button
-                  key={u.id}
-                  onClick={() => handleUserSwitch(u.id)}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg text-left transition-colors ${
-                    u.id === currentUser.id ? 'bg-neutral-100 font-semibold text-neutral-900' : 'text-neutral-700 hover:bg-neutral-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <UserIcon className="w-3.5 h-3.5 text-neutral-400" />
-                    <div>
-                      <p className="leading-tight">{u.name}</p>
-                      <p className="text-[10px] text-neutral-400 font-normal">{u.role}</p>
-                    </div>
+              {/* Cambiar de Usuario: EXCLUSIVO ADMINISTRADOR */}
+              {isAdmin && allUsers.length > 1 && (
+                <>
+                  <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider px-2 py-1 mt-1">
+                    Alternar Perfil (Admin)
                   </div>
-                  {u.id === currentUser.id && <Check className="w-3.5 h-3.5 text-neutral-900" />}
-                </button>
-              ))}
+                  <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                    {allUsers.map(u => (
+                      <button
+                        key={u.id}
+                        onClick={() => handleUserSwitch(u.id)}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg text-left transition-colors ${
+                          u.id === currentUser.id ? 'bg-neutral-100 font-semibold text-neutral-900' : 'text-neutral-700 hover:bg-neutral-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <UserIcon className="w-3.5 h-3.5 text-neutral-400" />
+                          <div>
+                            <p className="leading-tight">{u.name}</p>
+                            <p className="text-[10px] text-neutral-400 font-mono">{u.role}</p>
+                          </div>
+                        </div>
+                        {u.id === currentUser.id && <Check className="w-3.5 h-3.5 text-neutral-900" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
 
               <div className="pt-2 mt-2 border-t border-neutral-100 space-y-1">
-                {onOpenAccessManagement && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUserDropdown(false);
+                    onOpenProfileSettings?.();
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors font-medium text-left"
+                >
+                  <Settings className="w-3.5 h-3.5 text-neutral-600" />
+                  <span>Configuración de Perfil</span>
+                </button>
+
+                {isAdmin && onOpenAccessManagement && (
                   <button
                     type="button"
                     onClick={() => {
                       setShowUserDropdown(false);
                       onOpenAccessManagement();
                     }}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors font-medium text-left"
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors font-medium text-left"
                   >
-                    <UserPlus className="w-3.5 h-3.5 text-neutral-500" />
+                    <UserPlus className="w-3.5 h-3.5 text-neutral-600" />
                     <span>+ Crear Nuevos Accesos</span>
                   </button>
                 )}
@@ -297,7 +324,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-rose-700 hover:bg-rose-50 rounded-lg transition-colors font-medium text-left"
                 >
                   <LogOut className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Cerrar Sesión / Portal Accesos</span>
+                  <span>Cerrar Sesión</span>
                 </button>
               </div>
             </div>
