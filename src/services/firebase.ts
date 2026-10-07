@@ -5,7 +5,7 @@
  */
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, OAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { 
   getFirestore, 
   doc, 
@@ -33,6 +33,7 @@ export const firebaseApp = !getApps().length ? initializeApp(firebaseConfig) : g
 export const firestore: Firestore = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(firebaseApp);
 export const googleProvider = new GoogleAuthProvider();
+export const microsoftProvider = new OAuthProvider('microsoft.com');
 
 // Tipos de operaciones según directiva del Skill
 export enum OperationType {
@@ -106,6 +107,10 @@ export async function testConnection(): Promise<boolean> {
 
 export async function signInWithGoogle() {
   return await signInWithPopup(auth, googleProvider);
+}
+
+export async function signInWithMicrosoft() {
+  return await signInWithPopup(auth, microsoftProvider);
 }
 
 export async function ensureFirebaseAuthSession() {

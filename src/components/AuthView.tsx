@@ -17,13 +17,16 @@ import {
 } from 'lucide-react';
 import { db } from '../services/database';
 import { CurrencyCode } from '../types/financial';
-import { signInWithGoogle, ensureFirebaseAuthSession } from '../services/firebase';
+import { signInWithGoogle, signInWithMicrosoft, ensureFirebaseAuthSession } from '../services/firebase';
 
 interface AuthViewProps {
   onSuccessLogin?: () => void;
 }
 
 export const AuthView: React.FC<AuthViewProps> = ({ onSuccessLogin }) => {
+  // En producción (por defecto), los accesos demo están estrictamente deshabilitados
+  const isDemoModeEnabled = import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_MODE === 'true';
+
   const [tab, setTab] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
 
   // Formulario Login
@@ -35,7 +38,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessLogin }) => {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regCurrency, setRegCurrency] = useState<CurrencyCode>('USD');
-  const [regInitialBalance, setRegInitialBalance] = useState('200');
+  const [regInitialBalance, setRegInitialBalance] = useState('0');
 
   // 2FA Flow
   const [is2FAStep, setIs2FAStep] = useState(false);
@@ -137,15 +140,45 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessLogin }) => {
       }
     } catch (err: any) {
       console.warn('Error en Google Sign-In popup:', err);
-      // Fallback elegante a sesión local segura
-      db.loginOAuth('GOOGLE');
-      onSuccessLogin?.();
+      if (isDemoModeEnabled) {
+        db.loginOAuth('GOOGLE');
+        onSuccessLogin?.();
+      } else {
+        setErrorMessage('No fue posible autenticar con Google. Por favor intenta con tu correo y contraseña.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMicrosoftAuth = async () => {
+    setIsLoading(true);
+    setErrorMessage('');
+    try {
+      const userCred = await signInWithMicrosoft();
+      if (userCred?.user) {
+        db.handleFirebaseAuthUser({
+          uid: userCred.user.uid,
+          email: userCred.user.email,
+          displayName: userCred.user.displayName
+        });
+        onSuccessLogin?.();
+      }
+    } catch (err: any) {
+      console.warn('Error en Microsoft Sign-In popup:', err);
+      if (isDemoModeEnabled) {
+        db.loginOAuth('MICROSOFT');
+        onSuccessLogin?.();
+      } else {
+        setErrorMessage('No fue posible autenticar con Microsoft. Por favor intenta con tu correo y contraseña.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDemoLogin = (email: string) => {
+    if (!isDemoModeEnabled) return;
     setLoginEmail(email);
     setLoginPassword('password123');
     const res = db.login(email, 'password123');
@@ -191,7 +224,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessLogin }) => {
               <div>
                 <p className="font-semibold text-xs">Verificación en Dos Pasos (2FA)</p>
                 <p className="text-[11px] text-amber-800 mt-0.5">
-                  Esta cuenta tiene habilitada la autenticación en dos factores. Ingresa tu código de seguridad (Demo: <strong className="font-mono">123456</strong>).
+                  {isDemoModeEnabled ? (
+                    <>Esta cuenta tiene habilitada la autenticación en dos factores. Ingresa tu código de seguridad (Demo: <strong className="font-mono">123456</strong>).</>
+                  ) : (
+                    <>Esta cuenta tiene habilitada la verificación en dos pasos. Ingresa el código de seguridad de 6 dígitos de tu aplicación autenticadora.</>
+                  )}
                 </p>
               </div>
             </div>
@@ -292,13 +329,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessLogin }) => {
             {/* TAB 1: INICIAR SESIÓN */}
             {tab === 'LOGIN' && (
               <div className="space-y-4">
-                {/* Botón Google OAuth con Firebase */}
-                <div>
+                {/* Proveedores OAuth */}
+                <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
                     onClick={handleGoogleAuth}
                     disabled={isLoading}
-                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-3 border border-neutral-300 rounded-xl text-xs font-medium text-neutral-800 hover:bg-neutral-50 transition-colors shadow-2xs"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-3 border border-neutral-300 rounded-xl text-xs font-medium text-neutral-800 hover:bg-neutral-50 transition-colors shadow-2xs"
                   >
                     <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -306,7 +343,22 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessLogin }) => {
                       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                     </svg>
-                    <span>{isLoading ? 'Conectando con Google...' : 'Continuar con Google'}</span>
+                    <span>Google</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleMicrosoftAuth}
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-3 border border-neutral-300 rounded-xl text-xs font-medium text-neutral-800 hover:bg-neutral-50 transition-colors shadow-2xs"
+                  >
+                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 23 23">
+                      <path fill="#f35325" d="M1 1h10v10H1z"/>
+                      <path fill="#81bc06" d="M12 1h10v10H12z"/>
+                      <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+                      <path fill="#ffba08" d="M12 12h10v10H12z"/>
+                    </svg>
+                    <span>Microsoft</span>
                   </button>
                 </div>
 
@@ -371,35 +423,37 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessLogin }) => {
                   </button>
                 </form>
 
-                {/* Accesos rápidos de prueba debidamente rotulados por rol */}
-                <div className="pt-2 border-t border-neutral-100">
-                  <p className="text-[11px] text-neutral-400 text-center mb-2 font-medium">Accesos Rápidos de Demostración:</p>
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => handleDemoLogin('laura.gomez@ejemplo.com')}
-                      className="p-2 border border-neutral-200 rounded-xl hover:border-neutral-400 text-left transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-neutral-900">Laura Gómez</span>
-                        <span className="text-[9px] bg-neutral-100 px-1 rounded font-mono">USER</span>
-                      </div>
-                      <p className="text-[10px] text-neutral-500 truncate">Usuario Normal</p>
-                    </button>
+                {/* Accesos rápidos disponibles exclusivamente en desarrollo si la variable de entorno lo permite */}
+                {isDemoModeEnabled && (
+                  <div className="pt-2 border-t border-neutral-100">
+                    <p className="text-[11px] text-neutral-400 text-center mb-2 font-medium">Accesos Rápidos de Demostración (Solo Desarrollo):</p>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => handleDemoLogin('laura.gomez@ejemplo.com')}
+                        className="p-2 border border-neutral-200 rounded-xl hover:border-neutral-400 text-left transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-neutral-900">Laura Gómez</span>
+                          <span className="text-[9px] bg-neutral-100 px-1 rounded font-mono">USER</span>
+                        </div>
+                        <p className="text-[10px] text-neutral-500 truncate">Usuario Normal</p>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDemoLogin('proyectoiadate@gmail.com')}
-                      className="p-2 border border-neutral-900/40 bg-neutral-50 rounded-xl hover:border-neutral-900 text-left transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-neutral-900">Admin Sistema</span>
-                        <span className="text-[9px] bg-neutral-900 text-white px-1 rounded font-mono">ADMIN</span>
-                      </div>
-                      <p className="text-[10px] text-neutral-500 truncate">Administrador</p>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDemoLogin('proyectoiadate@gmail.com')}
+                        className="p-2 border border-neutral-900/40 bg-neutral-50 rounded-xl hover:border-neutral-900 text-left transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-neutral-900">Admin Sistema</span>
+                          <span className="text-[9px] bg-neutral-900 text-white px-1 rounded font-mono">ADMIN</span>
+                        </div>
+                        <p className="text-[10px] text-neutral-500 truncate">Administrador</p>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="text-center text-xs text-neutral-500">
                   ¿No tienes una cuenta aún?{' '}
