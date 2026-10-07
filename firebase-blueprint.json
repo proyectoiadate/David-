@@ -1,0 +1,205 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Perfil de usuario del sistema financiero",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["ADMIN", "MEMBER", "VIEWER"] },
+        "familyGroupId": { "type": "string", "maxLength": 128 },
+        "isEmailVerified": { "type": "boolean" },
+        "twoFactorEnabled": { "type": "boolean" },
+        "preferredCurrency": { "type": "string", "enum": ["USD", "EUR", "COP"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["id", "name", "email", "role", "preferredCurrency"]
+    },
+    "Account": {
+      "title": "Account",
+      "description": "Cuenta financiera (banco, efectivo, ahorros)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "familyGroupId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "type": { "type": "string", "enum": ["CASH", "SAVINGS", "CHECKING", "WALLET", "NEOBANK", "COOPERATIVE", "OTHER"] },
+        "institutionName": { "type": "string", "maxLength": 100 },
+        "currency": { "type": "string", "enum": ["USD", "EUR", "COP"] },
+        "currentBalance": { "type": "number" },
+        "initialBalance": { "type": "number" },
+        "accountNumberMasked": { "type": "string", "maxLength": 30 },
+        "visibility": { "type": "string", "enum": ["PRIVATE", "SHARED", "FAMILY"] },
+        "lowBalanceThreshold": { "type": "number" },
+        "color": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "name", "type", "currency", "currentBalance", "visibility"]
+    },
+    "CreditCard": {
+      "title": "CreditCard",
+      "description": "Tarjeta de crédito",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "familyGroupId": { "type": "string", "maxLength": 128 },
+        "accountId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "issuer": { "type": "string", "maxLength": 100 },
+        "currency": { "type": "string", "enum": ["USD", "EUR", "COP"] },
+        "creditLimit": { "type": "number" },
+        "usedAmount": { "type": "number" },
+        "closingDay": { "type": "number" },
+        "dueDay": { "type": "number" },
+        "interestRateAnnual": { "type": "number" },
+        "status": { "type": "string", "enum": ["ACTIVE", "BLOCKED", "CANCELLED"] },
+        "cardMasked": { "type": "string", "maxLength": 20 },
+        "visibility": { "type": "string", "enum": ["PRIVATE", "SHARED", "FAMILY"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "name", "issuer", "currency", "creditLimit", "usedAmount", "closingDay", "dueDay", "visibility"]
+    },
+    "Debt": {
+      "title": "Debt",
+      "description": "Obligación financiera o préstamo",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "familyGroupId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "creditor": { "type": "string", "maxLength": 100 },
+        "type": { "type": "string", "enum": ["BANK", "PERSONAL", "FAMILY", "VEHICLE", "MORTGAGE", "CONSUMER", "OTHER"] },
+        "initialCapital": { "type": "number" },
+        "currentBalance": { "type": "number" },
+        "annualInterestRate": { "type": "number" },
+        "interestType": { "type": "string", "enum": ["FIXED", "VARIABLE"] },
+        "monthlyInstallment": { "type": "number" },
+        "totalInstallments": { "type": "number" },
+        "remainingInstallments": { "type": "number" },
+        "startDate": { "type": "string", "maxLength": 20 },
+        "endDate": { "type": "string", "maxLength": 20 },
+        "currency": { "type": "string", "enum": ["USD", "EUR", "COP"] },
+        "visibility": { "type": "string", "enum": ["PRIVATE", "SHARED", "FAMILY"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "name", "creditor", "type", "initialCapital", "currentBalance", "annualInterestRate", "currency", "visibility"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Movimiento financiero (ingreso, gasto, transferencia, pago)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "familyGroupId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["INCOME", "EXPENSE", "TRANSFER", "CARD_PAYMENT", "DEBT_RECORD", "DEBT_PAYMENT", "BALANCE_ADJUSTMENT"] },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "enum": ["USD", "EUR", "COP"] },
+        "exchangeRateUsed": { "type": "number" },
+        "amountInBaseCurrency": { "type": "number" },
+        "date": { "type": "string", "maxLength": 20 },
+        "accountId": { "type": "string", "maxLength": 128 },
+        "destinationAccountId": { "type": "string", "maxLength": 128 },
+        "creditCardId": { "type": "string", "maxLength": 128 },
+        "debtId": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 100 },
+        "subcategory": { "type": "string", "maxLength": 100 },
+        "paymentMethod": { "type": "string", "enum": ["CASH", "DEBIT_CARD", "CREDIT_CARD", "BANK_TRANSFER", "WALLET_APP", "OTHER"] },
+        "description": { "type": "string", "maxLength": 255 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "tags": { "type": "array" },
+        "visibility": { "type": "string", "enum": ["PRIVATE", "SHARED", "FAMILY"] },
+        "isDeleted": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "type", "amount", "currency", "date", "accountId", "category", "paymentMethod", "visibility"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "Presupuesto por categoría",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "familyGroupId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "maxLength": 100 },
+        "limitAmount": { "type": "number" },
+        "period": { "type": "string", "enum": ["MONTHLY", "QUARTERLY", "ANNUAL"] },
+        "currency": { "type": "string", "enum": ["USD", "EUR", "COP"] },
+        "visibility": { "type": "string", "enum": ["PRIVATE", "SHARED", "FAMILY"] },
+        "alertThresholdPercent": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "name", "category", "limitAmount", "period", "currency", "visibility"]
+    },
+    "Goal": {
+      "title": "Goal",
+      "description": "Meta financiera o de ahorro",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "familyGroupId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "type": { "type": "string", "enum": ["TRAVEL", "HOUSING", "VEHICLE", "EDUCATION", "EMERGENCY_FUND", "CUSTOM"] },
+        "targetAmount": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "targetDate": { "type": "string", "maxLength": 20 },
+        "currency": { "type": "string", "enum": ["USD", "EUR", "COP"] },
+        "visibility": { "type": "string", "enum": ["PRIVATE", "SHARED", "FAMILY"] },
+        "monthlyPlannedContribution": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "name", "type", "targetAmount", "currentAmount", "targetDate", "currency", "visibility"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Colección de perfiles de usuario y accesos"
+    },
+    "/accounts/{accountId}": {
+      "schema": { "$ref": "#/entities/Account" },
+      "description": "Cuentas bancarias y depósitos personales y familiares"
+    },
+    "/creditCards/{cardId}": {
+      "schema": { "$ref": "#/entities/CreditCard" },
+      "description": "Tarjetas de crédito"
+    },
+    "/debts/{debtId}": {
+      "schema": { "$ref": "#/entities/Debt" },
+      "description": "Préstamos y deudas amortizables"
+    },
+    "/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Historial de transacciones de ingresos y egresos"
+    },
+    "/budgets/{budgetId}": {
+      "schema": { "$ref": "#/entities/Budget" },
+      "description": "Presupuestos de gastos por categoría"
+    },
+    "/goals/{goalId}": {
+      "schema": { "$ref": "#/entities/Goal" },
+      "description": "Metas de ahorro programado"
+    }
+  }
+}

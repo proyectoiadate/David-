@@ -1,0 +1,149 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------
+    // GLOBAL SECURITY HELPERS & VALIDATORS
+    // -------------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Comprueba si el usuario autenticado es dueño del registro
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Comprueba si un registro es de ámbito compartido/familiar
+    function isFamilyResource() {
+      return resource.data.visibility == 'FAMILY' || resource.data.visibility == 'SHARED';
+    }
+
+    // Regla de denegación por defecto (Default-Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------
+    // COLECCIÓN: USERS
+    // -------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(userId);
+      allow update: if isSignedIn() && (request.auth.uid == userId || resource.data.id == userId);
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // -------------------------------------------------------------
+    // COLECCIÓN: ACCOUNTS
+    // -------------------------------------------------------------
+    match /accounts/{accountId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource()
+      );
+      allow create: if isSignedIn() && isValidId(accountId) && (
+        incoming().userId == request.auth.uid ||
+        incoming().visibility in ['FAMILY', 'SHARED', 'PRIVATE']
+      );
+      allow update: if isSignedIn() && isValidId(accountId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource()
+      );
+      allow delete: if isSignedIn() && isValidId(accountId) && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource()
+      );
+    }
+
+    // -------------------------------------------------------------
+    // COLECCIÓN: CREDIT CARDS
+    // -------------------------------------------------------------
+    match /creditCards/{cardId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource()
+      );
+      allow create: if isSignedIn() && isValidId(cardId);
+      allow update: if isSignedIn() && isValidId(cardId);
+      allow delete: if isSignedIn() && isValidId(cardId);
+    }
+
+    // -------------------------------------------------------------
+    // COLECCIÓN: DEBTS
+    // -------------------------------------------------------------
+    match /debts/{debtId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource()
+      );
+      allow create: if isSignedIn() && isValidId(debtId);
+      allow update: if isSignedIn() && isValidId(debtId);
+      allow delete: if isSignedIn() && isValidId(debtId);
+    }
+
+    // -------------------------------------------------------------
+    // COLECCIÓN: TRANSACTIONS
+    // -------------------------------------------------------------
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource()
+      );
+      allow create: if isSignedIn() && isValidId(transactionId);
+      allow update: if isSignedIn() && isValidId(transactionId);
+      allow delete: if isSignedIn() && isValidId(transactionId);
+    }
+
+    // -------------------------------------------------------------
+    // COLECCIÓN: BUDGETS
+    // -------------------------------------------------------------
+    match /budgets/{budgetId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource()
+      );
+      allow create: if isSignedIn() && isValidId(budgetId);
+      allow update: if isSignedIn() && isValidId(budgetId);
+      allow delete: if isSignedIn() && isValidId(budgetId);
+    }
+
+    // -------------------------------------------------------------
+    // COLECCIÓN: GOALS
+    // -------------------------------------------------------------
+    match /goals/{goalId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isFamilyResource()
+      );
+      allow create: if isSignedIn() && isValidId(goalId);
+      allow update: if isSignedIn() && isValidId(goalId);
+      allow delete: if isSignedIn() && isValidId(goalId);
+    }
+
+    // -------------------------------------------------------------
+    // COLECCIÓN: ALERTS & AUDIT
+    // -------------------------------------------------------------
+    match /alerts/{alertId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isValidId(alertId);
+    }
+
+    match /auditLogs/{auditId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(auditId);
+    }
+  }
+}

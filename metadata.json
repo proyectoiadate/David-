@@ -1,0 +1,6 @@
+{
+  "name": "FinanzaFamiliar - Plataforma de Gestión Financiera",
+  "description": "Plataforma integral de finanzas personales y familiares: cuentas, movimientos, tarjetas, deudas (Snowball/Avalanche), presupuestos, metas, analítica inteligente, multi-moneda y auditoría.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
