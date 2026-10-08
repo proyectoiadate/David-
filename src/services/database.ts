@@ -1143,89 +1143,63 @@ class RelationalDatabase {
     if (this.firestoreInitialized) return;
     this.firestoreInitialized = true;
 
-    // Conectar y sincronizar con Google Cloud Firestore
-    FirestoreService.seedInitialDataIfNeeded({
-      users: this.state.users,
-      accounts: this.state.accounts,
-      creditCards: this.state.creditCards,
-      debts: this.state.debts,
-      budgets: this.state.budgets,
-      goals: this.state.goals,
-      transactions: this.state.transactions
-    }).then(() => {
-      this.isFirestoreOnline = true;
-      this.startFirestoreRealtimeSubscriptions();
-      this.notify();
-    }).catch(err => {
-      console.warn('[Firestore] Error inicializando seed Firestore:', err);
-      this.startFirestoreRealtimeSubscriptions();
-    });
+    this.isFirestoreOnline = true;
+    this.startFirestoreRealtimeSubscriptions();
+    this.notify();
   }
 
   private startFirestoreRealtimeSubscriptions() {
     // 1. Cuentas en tiempo real
     const unsubAcc = FirestoreService.subscribeAccounts(accounts => {
-      if (accounts && accounts.length > 0) {
-        this.state.accounts = accounts;
-        this.syncAccountBalances();
-        this.isFirestoreOnline = true;
-        this.notify();
-      }
+      this.state.accounts = accounts || [];
+      this.syncAccountBalances();
+      this.isFirestoreOnline = true;
+      this.notify();
     });
     this.unsubscribers.push(unsubAcc);
 
     // 2. Tarjetas de crédito en tiempo real
     const unsubCards = FirestoreService.subscribeCreditCards(cards => {
-      if (cards && cards.length > 0) {
-        this.state.creditCards = cards;
-        this.syncCreditCardUsages();
-        this.isFirestoreOnline = true;
-        this.notify();
-      }
+      this.state.creditCards = cards || [];
+      this.syncCreditCardUsages();
+      this.isFirestoreOnline = true;
+      this.notify();
     });
     this.unsubscribers.push(unsubCards);
 
     // 3. Deudas en tiempo real
     const unsubDebts = FirestoreService.subscribeDebts(debts => {
-      if (debts && debts.length > 0) {
-        this.state.debts = debts;
-        this.isFirestoreOnline = true;
-        this.notify();
-      }
+      this.state.debts = debts || [];
+      this.isFirestoreOnline = true;
+      this.notify();
     });
     this.unsubscribers.push(unsubDebts);
 
     // 4. Transacciones en tiempo real
     const unsubTxs = FirestoreService.subscribeTransactions(txs => {
-      if (txs && txs.length > 0) {
-        this.state.transactions = txs;
-        this.syncAccountBalances();
-        this.syncCreditCardUsages();
-        this.checkBudgetAlerts();
-        this.isFirestoreOnline = true;
-        this.notify();
-      }
+      this.state.transactions = txs || [];
+      this.syncAccountBalances();
+      this.syncCreditCardUsages();
+      this.checkBudgetAlerts();
+      this.isFirestoreOnline = true;
+      this.notify();
     });
     this.unsubscribers.push(unsubTxs);
 
     // 5. Presupuestos en tiempo real
     const unsubBdg = FirestoreService.subscribeBudgets(budgets => {
-      if (budgets && budgets.length > 0) {
-        this.state.budgets = budgets;
-        this.checkBudgetAlerts();
-        this.isFirestoreOnline = true;
-        this.notify();
-      }
+      this.state.budgets = budgets || [];
+      this.checkBudgetAlerts();
+      this.isFirestoreOnline = true;
+      this.notify();
     });
     this.unsubscribers.push(unsubBdg);
 
     // 6. Metas en tiempo real
     const unsubGoals = FirestoreService.subscribeGoals(goals => {
-      if (goals && goals.length > 0) {
-        this.state.goals = goals;
-        this.isFirestoreOnline = true;
-        this.notify();
-      }
+      this.state.goals = goals || [];
+      this.isFirestoreOnline = true;
+      this.notify();
     });
     this.unsubscribers.push(unsubGoals);
 
@@ -1241,20 +1215,40 @@ class RelationalDatabase {
   }
 
   private loadInitialState(): DatabaseState {
+    const isDemo = import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_MODE === 'true';
+    if (isDemo) {
+      return {
+        users: [...INITIAL_USERS],
+        familyGroups: [...INITIAL_FAMILY],
+        familyMembers: [...INITIAL_MEMBERS],
+        accounts: [...INITIAL_ACCOUNTS],
+        creditCards: [...INITIAL_CREDIT_CARDS],
+        debts: [...INITIAL_DEBTS],
+        goals: [...INITIAL_GOALS],
+        budgets: [...INITIAL_BUDGETS],
+        categories: [...INITIAL_CATEGORIES],
+        transactions: [...INITIAL_TRANSACTIONS],
+        scheduledTransactions: [...INITIAL_SCHEDULED],
+        alerts: [...INITIAL_ALERTS],
+        auditLogs: [...INITIAL_AUDIT],
+        tags: ['salario', 'fijo', 'vivienda', 'mercado', 'hogar', 'deuda', 'auto', 'ahorro', 'meta', 'restaurante', 'suscripcion']
+      };
+    }
+
     return {
-      users: [...INITIAL_USERS],
-      familyGroups: [...INITIAL_FAMILY],
-      familyMembers: [...INITIAL_MEMBERS],
-      accounts: [...INITIAL_ACCOUNTS],
-      creditCards: [...INITIAL_CREDIT_CARDS],
-      debts: [...INITIAL_DEBTS],
-      goals: [...INITIAL_GOALS],
-      budgets: [...INITIAL_BUDGETS],
+      users: [],
+      familyGroups: [],
+      familyMembers: [],
+      accounts: [],
+      creditCards: [],
+      debts: [],
+      goals: [],
+      budgets: [],
       categories: [...INITIAL_CATEGORIES],
-      transactions: [...INITIAL_TRANSACTIONS],
-      scheduledTransactions: [...INITIAL_SCHEDULED],
-      alerts: [...INITIAL_ALERTS],
-      auditLogs: [...INITIAL_AUDIT],
+      transactions: [],
+      scheduledTransactions: [],
+      alerts: [],
+      auditLogs: [],
       tags: ['salario', 'fijo', 'vivienda', 'mercado', 'hogar', 'deuda', 'auto', 'ahorro', 'meta', 'restaurante', 'suscripcion']
     };
   }
@@ -1320,11 +1314,16 @@ class RelationalDatabase {
   }
 
   public loginOAuth(provider: 'GOOGLE' | 'MICROSOFT'): { success: boolean; user?: User } {
+    const isDemo = import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_MODE === 'true';
+    if (!isDemo) {
+      return { success: false };
+    }
     const targetEmail = provider === 'GOOGLE' ? 'proyectoiadate@gmail.com' : 'laura.gomez@ejemplo.com';
     let user = this.state.users.find(u => u.email === targetEmail);
     if (!user) {
       user = this.state.users[0];
     }
+    if (!user) return { success: false };
 
     this.currentUserId = user.id;
     this.authenticated = true;
@@ -1346,7 +1345,7 @@ class RelationalDatabase {
         name: firebaseUser.displayName || email.split('@')[0] || 'Usuario',
         email: email,
         role: isAdminEmail ? 'ADMIN' : 'USER',
-        familyGroupId: 'fam-1',
+        familyGroupId: undefined,
         isEmailVerified: true,
         twoFactorEnabled: false,
         preferredCurrency: 'USD',
@@ -1381,7 +1380,7 @@ class RelationalDatabase {
       name: data.name,
       email: data.email,
       role: 'USER',
-      familyGroupId: 'fam-1',
+      familyGroupId: undefined,
       isEmailVerified: true,
       twoFactorEnabled: false,
       preferredCurrency: data.currency || 'USD',
@@ -1393,19 +1392,11 @@ class RelationalDatabase {
     this.state.users.push(newUser);
     FirestoreService.setUser(newUser).catch(() => {});
     
-    // Crear cuenta personal inicial
-    this.createAccount({
-      userId: id,
-      name: `Billetera Personal de ${data.name.split(' ')[0]}`,
-      type: 'CASH',
-      institutionName: 'Efectivo',
-      currency: data.currency || 'USD',
-      initialBalance: 100,
-      visibility: 'PRIVATE',
-      lowBalanceThreshold: 20
-    });
+    // PRODUCCIÓN: No se crean movimientos, gastos, ingresos, presupuestos, metas, deudas ni cuentas por defecto.
+    // El usuario inicia con un saldo total de $0 y estado financiero completamente limpio.
 
     this.currentUserId = newUser.id;
+    this.currentCurrency = data.currency || 'USD';
     this.authenticated = true;
     this.pending2FAUser = null;
     this.recordAudit('User', id, 'CREATE', null, { name: data.name, email: data.email });
@@ -1444,74 +1435,89 @@ class RelationalDatabase {
 
   public getScopedAccounts(): Account[] {
     const current = this.getCurrentUser();
+    if (!current?.id) return [];
     if (this.activeScope === 'ALL') {
-      return this.state.accounts.filter(a => !a.isDeleted);
+      return this.state.accounts.filter(a => !a.isDeleted && (a.userId === current.id || (current.familyGroupId && a.familyGroupId === current.familyGroupId)));
     }
     if (this.activeScope === 'PERSONAL') {
       return this.state.accounts.filter(a => !a.isDeleted && a.userId === current.id && a.visibility === 'PRIVATE');
     }
-    return this.state.accounts.filter(a => !a.isDeleted && (a.visibility === 'FAMILY' || a.visibility === 'SHARED'));
+    return this.state.accounts.filter(a => !a.isDeleted && (a.visibility === 'FAMILY' || a.visibility === 'SHARED') && (a.userId === current.id || (current.familyGroupId && a.familyGroupId === current.familyGroupId)));
   }
 
   public getScopedTransactions(): Transaction[] {
     const current = this.getCurrentUser();
+    if (!current?.id) return [];
     if (this.activeScope === 'ALL') {
-      return this.state.transactions.filter(t => !t.isDeleted);
+      return this.state.transactions.filter(t => !t.isDeleted && (t.userId === current.id || (current.familyGroupId && t.familyGroupId === current.familyGroupId)));
     }
     if (this.activeScope === 'PERSONAL') {
       return this.state.transactions.filter(t => !t.isDeleted && t.userId === current.id && t.visibility === 'PRIVATE');
     }
-    return this.state.transactions.filter(t => !t.isDeleted && (t.visibility === 'FAMILY' || t.visibility === 'SHARED'));
+    return this.state.transactions.filter(t => !t.isDeleted && (t.visibility === 'FAMILY' || t.visibility === 'SHARED') && (t.userId === current.id || (current.familyGroupId && t.familyGroupId === current.familyGroupId)));
   }
 
   public getScopedCreditCards(): CreditCard[] {
     const current = this.getCurrentUser();
+    if (!current?.id) return [];
     if (this.activeScope === 'ALL') {
-      return this.state.creditCards.filter(c => !c.isDeleted);
+      return this.state.creditCards.filter(c => !c.isDeleted && (c.userId === current.id || (current.familyGroupId && c.familyGroupId === current.familyGroupId)));
     }
     if (this.activeScope === 'PERSONAL') {
       return this.state.creditCards.filter(c => !c.isDeleted && c.userId === current.id && c.visibility === 'PRIVATE');
     }
-    return this.state.creditCards.filter(c => !c.isDeleted && (c.visibility === 'FAMILY' || c.visibility === 'SHARED'));
+    return this.state.creditCards.filter(c => !c.isDeleted && (c.visibility === 'FAMILY' || c.visibility === 'SHARED') && (c.userId === current.id || (current.familyGroupId && c.familyGroupId === current.familyGroupId)));
   }
 
   public getScopedDebts(): Debt[] {
     const current = this.getCurrentUser();
+    if (!current?.id) return [];
     if (this.activeScope === 'ALL') {
-      return this.state.debts.filter(d => !d.isDeleted);
+      return this.state.debts.filter(d => !d.isDeleted && (d.userId === current.id || (current.familyGroupId && d.familyGroupId === current.familyGroupId)));
     }
     if (this.activeScope === 'PERSONAL') {
       return this.state.debts.filter(d => !d.isDeleted && d.userId === current.id && d.visibility === 'PRIVATE');
     }
-    return this.state.debts.filter(d => !d.isDeleted && (d.visibility === 'FAMILY' || d.visibility === 'SHARED'));
+    return this.state.debts.filter(d => !d.isDeleted && (d.visibility === 'FAMILY' || d.visibility === 'SHARED') && (d.userId === current.id || (current.familyGroupId && d.familyGroupId === current.familyGroupId)));
   }
 
   public getScopedBudgets(): Budget[] {
     const current = this.getCurrentUser();
+    if (!current?.id) return [];
     if (this.activeScope === 'ALL') {
-      return this.state.budgets.filter(b => !b.isDeleted);
+      return this.state.budgets.filter(b => !b.isDeleted && (b.userId === current.id || (current.familyGroupId && b.familyGroupId === current.familyGroupId)));
     }
     if (this.activeScope === 'PERSONAL') {
       return this.state.budgets.filter(b => !b.isDeleted && b.userId === current.id && b.visibility === 'PRIVATE');
     }
-    return this.state.budgets.filter(b => !b.isDeleted && (b.visibility === 'FAMILY' || b.visibility === 'SHARED'));
+    return this.state.budgets.filter(b => !b.isDeleted && (b.visibility === 'FAMILY' || b.visibility === 'SHARED') && (b.userId === current.id || (current.familyGroupId && b.familyGroupId === current.familyGroupId)));
   }
 
   public getScopedGoals(): Goal[] {
     const current = this.getCurrentUser();
+    if (!current?.id) return [];
     if (this.activeScope === 'ALL') {
-      return this.state.goals.filter(g => !g.isDeleted);
+      return this.state.goals.filter(g => !g.isDeleted && (g.userId === current.id || (current.familyGroupId && g.familyGroupId === current.familyGroupId)));
     }
     if (this.activeScope === 'PERSONAL') {
       return this.state.goals.filter(g => !g.isDeleted && g.userId === current.id && g.visibility === 'PRIVATE');
     }
-    return this.state.goals.filter(g => !g.isDeleted && (g.visibility === 'FAMILY' || g.visibility === 'SHARED'));
+    return this.state.goals.filter(g => !g.isDeleted && (g.visibility === 'FAMILY' || g.visibility === 'SHARED') && (g.userId === current.id || (current.familyGroupId && g.familyGroupId === current.familyGroupId)));
   }
 
   public getPersonalVsFamilyBreakdown() {
     const current = this.getCurrentUser();
     const curr = this.currentCurrency;
     const currentMonth = new Date().toISOString().slice(0, 7);
+
+    if (!current?.id) {
+      return {
+        personal: { liquidAssets: 0, monthlyIncome: 0, monthlyExpense: 0, netBalance: 0, totalDebt: 0, usedCards: 0, accountCount: 0, transactionCount: 0 },
+        family: { liquidAssets: 0, monthlyIncome: 0, monthlyExpense: 0, netBalance: 0, totalDebt: 0, usedCards: 0, accountCount: 0, transactionCount: 0 },
+        consolidated: { totalLiquidAssets: 0, totalIncome: 0, totalExpense: 0, netBalance: 0, totalDebt: 0, totalUsedCards: 0 },
+        memberContributions: []
+      };
+    }
 
     // Personal entities
     const pAccs = this.state.accounts.filter(a => !a.isDeleted && a.userId === current.id && a.visibility === 'PRIVATE');
@@ -1525,11 +1531,12 @@ class RelationalDatabase {
     const pUsedCards = pCards.reduce((sum, c) => sum + FinancialEngine.convertCurrency(c.usedAmount, c.currency, curr).convertedAmount, 0);
 
     // Family entities
-    const fAccs = this.state.accounts.filter(a => !a.isDeleted && (a.visibility === 'FAMILY' || a.visibility === 'SHARED'));
-    const fTxs = this.state.transactions.filter(t => !t.isDeleted && (t.visibility === 'FAMILY' || t.visibility === 'SHARED'));
+    const hasFamily = Boolean(current.familyGroupId);
+    const fAccs = this.state.accounts.filter(a => !a.isDeleted && (a.visibility === 'FAMILY' || a.visibility === 'SHARED') && (a.userId === current.id || (hasFamily && a.familyGroupId === current.familyGroupId)));
+    const fTxs = this.state.transactions.filter(t => !t.isDeleted && (t.visibility === 'FAMILY' || t.visibility === 'SHARED') && (t.userId === current.id || (hasFamily && t.familyGroupId === current.familyGroupId)));
     const fMonthTxs = fTxs.filter(t => t.date.startsWith(currentMonth));
-    const fDebts = this.state.debts.filter(d => !d.isDeleted && (d.visibility === 'FAMILY' || d.visibility === 'SHARED'));
-    const fCards = this.state.creditCards.filter(c => !c.isDeleted && (c.visibility === 'FAMILY' || c.visibility === 'SHARED'));
+    const fDebts = this.state.debts.filter(d => !d.isDeleted && (d.visibility === 'FAMILY' || d.visibility === 'SHARED') && (d.userId === current.id || (hasFamily && d.familyGroupId === current.familyGroupId)));
+    const fCards = this.state.creditCards.filter(c => !c.isDeleted && (c.visibility === 'FAMILY' || c.visibility === 'SHARED') && (c.userId === current.id || (hasFamily && c.familyGroupId === current.familyGroupId)));
     const fBalance = FinancialEngine.calculateGeneralBalance(fMonthTxs, curr);
     const fLiquidAssets = fAccs.reduce((sum, a) => sum + FinancialEngine.convertCurrency(a.currentBalance, a.currency, curr).convertedAmount, 0);
     const fTotalDebt = fDebts.reduce((sum, d) => sum + FinancialEngine.convertCurrency(d.currentBalance, d.currency, curr).convertedAmount, 0);
@@ -1537,16 +1544,18 @@ class RelationalDatabase {
 
     // Member contributions to Family income
     const familyIncomes = fMonthTxs.filter(t => t.type === 'INCOME');
-    const memberContributions = this.state.users.map(u => {
-      const uIncomes = familyIncomes.filter(t => t.userId === u.id);
-      const total = uIncomes.reduce((sum, t) => sum + FinancialEngine.convertCurrency(t.amount, t.currency, curr).convertedAmount, 0);
-      return {
-        userId: u.id,
-        name: u.name,
-        amount: total,
-        percentage: fBalance.totalIncome > 0 ? Math.round((total / fBalance.totalIncome) * 100) : 0
-      };
-    }).filter(m => m.amount > 0 || m.userId === current.id);
+    const memberContributions = this.state.users
+      .filter(u => u.id === current.id || (hasFamily && u.familyGroupId === current.familyGroupId))
+      .map(u => {
+        const uIncomes = familyIncomes.filter(t => t.userId === u.id);
+        const total = uIncomes.reduce((sum, t) => sum + FinancialEngine.convertCurrency(t.amount, t.currency, curr).convertedAmount, 0);
+        return {
+          userId: u.id,
+          name: u.name,
+          amount: total,
+          percentage: fBalance.totalIncome > 0 ? Math.round((total / fBalance.totalIncome) * 100) : 0
+        };
+      }).filter(m => m.amount > 0 || m.userId === current.id);
 
     return {
       personal: {
@@ -1602,7 +1611,7 @@ class RelationalDatabase {
       name: data.name,
       email: data.email,
       role: finalRole,
-      familyGroupId: 'fam-1',
+      familyGroupId: undefined,
       isEmailVerified: true,
       twoFactorEnabled: !!data.twoFactorEnabled,
       preferredCurrency: data.preferredCurrency || 'USD',
@@ -1612,30 +1621,6 @@ class RelationalDatabase {
     };
 
     this.state.users.push(newUser);
-
-    // Create a personal wallet account for the new user
-    this.createAccount({
-      userId: id,
-      name: `Billetera Personal de ${data.name.split(' ')[0]}`,
-      type: 'CASH',
-      institutionName: 'Efectivo Personal',
-      currency: data.preferredCurrency || 'USD',
-      initialBalance: data.initialPersonalBalance ?? 150,
-      visibility: 'PRIVATE',
-      lowBalanceThreshold: 20
-    });
-
-    // Add to family members
-    this.state.familyMembers.push({
-      id: `mem-${Date.now()}`,
-      familyGroupId: 'fam-1',
-      userId: id,
-      role: finalRole === 'ADMIN' ? 'ADMIN' : 'MEMBER',
-      canViewAll: finalRole === 'ADMIN',
-      canManageBudgets: finalRole === 'ADMIN',
-      joinedAt: now
-    });
-
     this.recordAudit('UserAccess', id, 'CREATE', null, { name: data.name, email: data.email, role: finalRole });
     FirestoreService.setUser(newUser).catch(err => console.warn('[Firestore] Error guardando usuario:', err));
     this.notify();
@@ -1678,7 +1663,21 @@ class RelationalDatabase {
 
   // Active Context
   public getCurrentUser(): User {
-    return this.state.users.find(u => u.id === this.currentUserId) || this.state.users[0];
+    const found = this.state.users.find(u => u.id === this.currentUserId) || this.state.users[0];
+    if (found) return found;
+    return {
+      id: this.currentUserId || 'guest',
+      name: 'Usuario',
+      email: '',
+      role: 'USER',
+      familyGroupId: undefined,
+      isEmailVerified: false,
+      twoFactorEnabled: false,
+      preferredCurrency: this.currentCurrency || 'USD',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isDeleted: false
+    };
   }
 
   public setCurrentUserId(id: string) {

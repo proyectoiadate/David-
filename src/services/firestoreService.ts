@@ -529,72 +529,12 @@ export class FirestoreService {
   }
 
   // -------------------------------------------------------------
-  // INITIAL SEEDING TO FIRESTORE
+  // INITIAL SEEDING TO FIRESTORE (DESHABILITADO EN PRODUCCIÓN)
   // -------------------------------------------------------------
-  static async seedInitialDataIfNeeded(initialData: {
-    users: User[];
-    accounts: Account[];
-    creditCards: CreditCard[];
-    debts: Debt[];
-    budgets: Budget[];
-    goals: Goal[];
-    transactions: Transaction[];
-  }): Promise<boolean> {
-    if (!this.isCurrentUserAdmin()) {
-      return false;
-    }
-    try {
-      const accSnap = await getDocs(collection(firestore, 'accounts'));
-      if (!accSnap.empty) {
-        // Ya existen datos en Firestore, no sobreescribir
-        return false;
-      }
-
-      console.log('[Firestore] Inicializando datos iniciales en la nube...');
-      const batchPromises: Promise<any>[] = [];
-
-      // Seed Users
-      for (const u of initialData.users) {
-        batchPromises.push(setDoc(doc(firestore, 'users', u.id), u));
-      }
-
-      // Seed Accounts
-      for (const a of initialData.accounts) {
-        batchPromises.push(setDoc(doc(firestore, 'accounts', a.id), a));
-      }
-
-      // Seed Credit Cards
-      for (const c of initialData.creditCards) {
-        batchPromises.push(setDoc(doc(firestore, 'creditCards', c.id), c));
-      }
-
-      // Seed Debts
-      for (const d of initialData.debts) {
-        batchPromises.push(setDoc(doc(firestore, 'debts', d.id), d));
-      }
-
-      // Seed Budgets
-      for (const b of initialData.budgets) {
-        batchPromises.push(setDoc(doc(firestore, 'budgets', b.id), b));
-      }
-
-      // Seed Goals
-      for (const g of initialData.goals) {
-        batchPromises.push(setDoc(doc(firestore, 'goals', g.id), g));
-      }
-
-      // Seed Transactions
-      for (const t of initialData.transactions) {
-        batchPromises.push(setDoc(doc(firestore, 'transactions', t.id), t));
-      }
-
-      await Promise.all(batchPromises);
-      console.log('[Firestore] Datos sembrados exitosamente en Google Cloud Firestore.');
-      return true;
-    } catch (err) {
-      console.warn('[Firestore] Error opcional en seeding:', err);
-      return false;
-    }
+  static async seedInitialDataIfNeeded(_initialData?: any): Promise<boolean> {
+    // EN PRODUCCIÓN: Nunca sembrar datos ficticios de cuentas, deudas, tarjetas o transacciones.
+    // Los nuevos usuarios comienzan con un estado financiero completamente limpio ($0).
+    return false;
   }
 
   // -------------------------------------------------------------

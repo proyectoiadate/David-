@@ -204,76 +204,94 @@ export const AccountsView: React.FC = () => {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {accounts.map(acc => {
-            const isLowBalance = acc.currentBalance <= acc.lowBalanceThreshold;
-            const converted = FinancialEngine.convertCurrency(acc.currentBalance, acc.currency, currency).convertedAmount;
+        {accounts.length === 0 ? (
+          <div className="p-8 text-center border-2 border-dashed border-neutral-200 rounded-2xl space-y-3 bg-neutral-50/50">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center">
+              <Wallet className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-bold text-neutral-900">Tu primera cuenta financiera aún no ha sido creada</h3>
+            <p className="text-xs text-neutral-500 max-w-md mx-auto">
+              Agrega tu cuenta bancaria de ahorros o corriente, billetera digital o efectivo para empezar a registrar tus saldos e ingresos.
+            </p>
+            <button
+              onClick={() => setShowNewAccountModal(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg shadow-xs transition-colors"
+            >
+              + Crear primera cuenta
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {accounts.map(acc => {
+              const isLowBalance = acc.currentBalance <= acc.lowBalanceThreshold;
+              const converted = FinancialEngine.convertCurrency(acc.currentBalance, acc.currency, currency).convertedAmount;
 
-            return (
-              <div 
-                key={acc.id} 
-                className="p-5 bg-white border border-neutral-200 rounded-xl space-y-4 hover:border-neutral-300 transition-all shadow-2xs"
-              >
-                <div className="flex items-start justify-between">
+              return (
+                <div 
+                  key={acc.id} 
+                  className="p-5 bg-white border border-neutral-200 rounded-xl space-y-4 hover:border-neutral-300 transition-all shadow-2xs"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-neutral-900 text-sm">{acc.name}</h3>
+                      <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 mt-0.5">
+                        <span>{acc.institutionName}</span>
+                        <span aria-hidden="true">·</span>
+                        <span className="capitalize">{acc.type.toLowerCase()}</span>
+                        {acc.accountNumberMasked && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span className="font-mono">{acc.accountNumberMasked}</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
+                          acc.visibility === 'PRIVATE' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {acc.visibility === 'PRIVATE' ? '👤 Cuenta Personal' : '👨‍👩‍👧‍👦 Cuenta Familiar'}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => db.deleteAccount(acc.id)}
+                      className="text-neutral-400 hover:text-rose-600 p-1"
+                      title="Eliminar cuenta a papelera"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Saldo de la cuenta */}
                   <div>
-                    <h3 className="font-semibold text-neutral-900 text-sm">{acc.name}</h3>
-                    <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 mt-0.5">
-                      <span>{acc.institutionName}</span>
-                      <span aria-hidden="true">·</span>
-                      <span className="capitalize">{acc.type.toLowerCase()}</span>
-                      {acc.accountNumberMasked && (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <span className="font-mono">{acc.accountNumberMasked}</span>
-                        </>
-                      )}
+                    <div className="text-xs text-neutral-500">Saldo Actual</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums text-neutral-900 mt-0.5">
+                      {acc.currency} {acc.currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </div>
-                    <div className="mt-1 flex items-center gap-1.5">
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
-                        acc.visibility === 'PRIVATE' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'
-                      }`}>
-                        {acc.visibility === 'PRIVATE' ? '👤 Cuenta Personal' : '👨‍👩‍👧‍👦 Cuenta Familiar'}
-                      </span>
-                    </div>
+                    {acc.currency !== currency && (
+                      <div className="text-xs text-neutral-400 font-mono tabular-nums">
+                        ≈ {symbol}{converted.toLocaleString(undefined, { minimumFractionDigits: 2 })} {currency}
+                      </div>
+                    )}
                   </div>
-                  <button
-                    onClick={() => db.deleteAccount(acc.id)}
-                    className="text-neutral-400 hover:text-rose-600 p-1"
-                    title="Eliminar cuenta a papelera"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
 
-                {/* Saldo de la cuenta */}
-                <div>
-                  <div className="text-xs text-neutral-500">Saldo Actual</div>
-                  <div className="text-2xl font-bold font-mono tabular-nums text-neutral-900 mt-0.5">
-                    {acc.currency} {acc.currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </div>
-                  {acc.currency !== currency && (
-                    <div className="text-xs text-neutral-400 font-mono tabular-nums">
-                      ≈ {symbol}{converted.toLocaleString(undefined, { minimumFractionDigits: 2 })} {currency}
+                  {/* Advertencia de Bajo Saldo */}
+                  {isLowBalance && (
+                    <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-[11px]">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>Saldo por debajo del umbral mínimo ({acc.currency} {acc.lowBalanceThreshold})</span>
                     </div>
                   )}
-                </div>
 
-                {/* Advertencia de Bajo Saldo */}
-                {isLowBalance && (
-                  <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-[11px]">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span>Saldo por debajo del umbral mínimo ({acc.currency} {acc.lowBalanceThreshold})</span>
+                  <div className="pt-2 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-400">
+                    <span className="capitalize">{acc.visibility.toLowerCase()}</span>
+                    <span>Saldo inicial: {acc.currency} {acc.initialBalance}</span>
                   </div>
-                )}
-
-                <div className="pt-2 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-400">
-                  <span className="capitalize">{acc.visibility.toLowerCase()}</span>
-                  <span>Saldo inicial: {acc.currency} {acc.initialBalance}</span>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Sección 2: Tarjetas de Crédito */}
@@ -289,100 +307,118 @@ export const AccountsView: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {creditCards.map(card => {
-            const usage = FinancialEngine.recalculateCreditCardUsage(card, transactions);
-            const settlementAccount = accounts.find(a => a.id === card.accountId);
+        {creditCards.length === 0 ? (
+          <div className="p-6 text-center border border-dashed border-neutral-200 rounded-xl space-y-2 bg-neutral-50/50">
+            <div className="w-10 h-10 mx-auto rounded-xl bg-neutral-100 text-neutral-500 flex items-center justify-center">
+              <CardIcon className="w-5 h-5" />
+            </div>
+            <h3 className="text-xs font-bold text-neutral-900">No tienes tarjetas de crédito registradas</h3>
+            <p className="text-[11px] text-neutral-500 max-w-sm mx-auto">
+              Registra tus tarjetas para dar seguimiento a tus límites de crédito, consumos, fechas de corte y fechas de pago.
+            </p>
+            <button
+              onClick={() => setShowNewCardModal(true)}
+              className="text-xs font-semibold text-sky-700 hover:text-sky-900 pt-1"
+            >
+              + Agregar primera tarjeta de crédito
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {creditCards.map(card => {
+              const usage = FinancialEngine.recalculateCreditCardUsage(card, transactions);
+              const settlementAccount = accounts.find(a => a.id === card.accountId);
 
-            return (
-              <div 
-                key={card.id} 
-                className="p-5 bg-white border border-neutral-200 rounded-xl space-y-4 shadow-2xs"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center font-mono text-xs font-bold">
-                      <CardIcon className="w-5 h-5" />
+              return (
+                <div 
+                  key={card.id} 
+                  className="p-5 bg-white border border-neutral-200 rounded-xl space-y-4 shadow-2xs"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center font-mono text-xs font-bold">
+                        <CardIcon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-neutral-900 text-sm">{card.name}</h3>
+                        <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
+                          <span>{card.issuer}</span>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-mono">{card.cardMasked}</span>
+                          <span aria-hidden="true">·</span>
+                          <span className="text-emerald-700 font-medium">Activa</span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
+                            card.visibility === 'PRIVATE' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            {card.visibility === 'PRIVATE' ? '👤 Tarjeta Personal' : '👨‍👩‍👧‍👦 Tarjeta Familiar'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => db.deleteCreditCard(card.id)}
+                      className="text-neutral-400 hover:text-rose-600 p-1"
+                      title="Eliminar tarjeta"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Métricas de Cupo */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-xs text-neutral-500">Cupo Utilizado</span>
+                      <span className="font-mono font-bold text-neutral-900 text-lg tabular-nums">
+                        ${usage.usedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-neutral-100 rounded-full h-2.5 overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all ${
+                          usage.utilizationPercent > 70 
+                            ? 'bg-rose-600' 
+                            : usage.utilizationPercent > 40 
+                            ? 'bg-amber-500' 
+                            : 'bg-neutral-900'
+                        }`}
+                        style={{ width: `${Math.min(100, usage.utilizationPercent)}%` }}
+                      />
+                    </div>
+
+                    <div className="flex justify-between text-xs text-neutral-500">
+                      <span>Disponible: ${usage.availableAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span>Límite: ${card.creditLimit.toLocaleString(undefined, { minimumFractionDigits: 2 })} ({usage.utilizationPercent}%)</span>
+                    </div>
+                  </div>
+
+                  {/* Datos de Ciclo y Facturación */}
+                  <div className="grid grid-cols-3 gap-2 p-3 bg-neutral-50 rounded-lg text-xs">
+                    <div>
+                      <span className="text-[11px] text-neutral-400 block">Día de Corte</span>
+                      <span className="font-semibold text-neutral-900">Día {card.closingDay}</span>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-neutral-900 text-sm">{card.name}</h3>
-                      <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
-                        <span>{card.issuer}</span>
-                        <span aria-hidden="true">·</span>
-                        <span className="font-mono">{card.cardMasked}</span>
-                        <span aria-hidden="true">·</span>
-                        <span className="text-emerald-700 font-medium">Activa</span>
-                      </div>
-                      <div className="mt-1 flex items-center gap-1.5">
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
-                          card.visibility === 'PRIVATE' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'
-                        }`}>
-                          {card.visibility === 'PRIVATE' ? '👤 Tarjeta Personal' : '👨‍👩‍👧‍👦 Tarjeta Familiar'}
-                        </span>
-                      </div>
+                      <span className="text-[11px] text-neutral-400 block">Día de Pago</span>
+                      <span className="font-semibold text-neutral-900">Día {card.dueDay}</span>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-neutral-400 block">Tasa Anual</span>
+                      <span className="font-semibold text-neutral-900">{card.interestRateAnnual}%</span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => db.deleteCreditCard(card.id)}
-                    className="text-neutral-400 hover:text-rose-600 p-1"
-                    title="Eliminar tarjeta"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
 
-                {/* Métricas de Cupo */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-xs text-neutral-500">Cupo Utilizado</span>
-                    <span className="font-mono font-bold text-neutral-900 text-lg tabular-nums">
-                      ${usage.usedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-
-                  <div className="w-full bg-neutral-100 rounded-full h-2.5 overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all ${
-                        usage.utilizationPercent > 70 
-                          ? 'bg-rose-600' 
-                          : usage.utilizationPercent > 40 
-                          ? 'bg-amber-500' 
-                          : 'bg-neutral-900'
-                      }`}
-                      style={{ width: `${Math.min(100, usage.utilizationPercent)}%` }}
-                    />
-                  </div>
-
-                  <div className="flex justify-between text-xs text-neutral-500">
-                    <span>Disponible: ${usage.availableAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                    <span>Límite: ${card.creditLimit.toLocaleString(undefined, { minimumFractionDigits: 2 })} ({usage.utilizationPercent}%)</span>
+                  <div className="pt-2 border-t border-neutral-100 text-[11px] text-neutral-500 flex justify-between">
+                    <span>Cuenta débito vinculada: {settlementAccount?.name || 'General'}</span>
+                    <span className="capitalize">{card.visibility.toLowerCase()}</span>
                   </div>
                 </div>
-
-                {/* Datos de Ciclo y Facturación */}
-                <div className="grid grid-cols-3 gap-2 p-3 bg-neutral-50 rounded-lg text-xs">
-                  <div>
-                    <span className="text-[11px] text-neutral-400 block">Día de Corte</span>
-                    <span className="font-semibold text-neutral-900">Día {card.closingDay}</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-neutral-400 block">Día de Pago</span>
-                    <span className="font-semibold text-neutral-900">Día {card.dueDay}</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-neutral-400 block">Tasa Anual</span>
-                    <span className="font-semibold text-neutral-900">{card.interestRateAnnual}%</span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-neutral-100 text-[11px] text-neutral-500 flex justify-between">
-                  <span>Cuenta débito vinculada: {settlementAccount?.name || 'General'}</span>
-                  <span className="capitalize">{card.visibility.toLowerCase()}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Modal Crear Cuenta */}

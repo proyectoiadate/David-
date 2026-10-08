@@ -121,7 +121,24 @@ export const BudgetsView: React.FC = () => {
       </div>
 
       {/* Lista de Presupuestos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {budgets.length === 0 ? (
+        <div className="p-8 text-center border-2 border-dashed border-neutral-200 rounded-2xl space-y-3 bg-neutral-50/50">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <PiggyBank className="w-6 h-6" />
+          </div>
+          <h3 className="text-sm font-bold text-neutral-900">Crea tu primer presupuesto</h3>
+          <p className="text-xs text-neutral-500 max-w-md mx-auto">
+            Establece techos de gasto por categoría para planificar tus finanzas y recibir alertas preventivas antes de excederte.
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg shadow-xs transition-colors"
+          >
+            + Crear primer presupuesto
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {budgets.map(b => {
           const progress = FinancialEngine.calculateBudgetProgress(b, transactions);
           const convertedLimit = FinancialEngine.convertCurrency(b.limitAmount, b.currency, currency).convertedAmount;
@@ -211,6 +228,7 @@ export const BudgetsView: React.FC = () => {
           );
         })}
       </div>
+      )}
 
       {/* Modal Nuevo Presupuesto */}
       {showModal && (

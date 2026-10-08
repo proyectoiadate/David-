@@ -38,7 +38,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessLogin }) => {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regCurrency, setRegCurrency] = useState<CurrencyCode>('USD');
-  const [regInitialBalance, setRegInitialBalance] = useState('0');
 
   // 2FA Flow
   const [is2FAStep, setIs2FAStep] = useState(false);
@@ -523,37 +522,22 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessLogin }) => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-medium text-neutral-700 mb-1">
-                      Moneda Principal
-                    </label>
-                    <select
-                      value={regCurrency}
-                      onChange={e => setRegCurrency(e.target.value as CurrencyCode)}
-                      className="w-full px-2.5 py-2 border border-neutral-300 rounded-lg"
-                    >
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
-                      <option value="COP">COP ($)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-neutral-700 mb-1">
-                      Saldo Inicial Personal
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2 text-neutral-400 font-mono">$</span>
-                      <input
-                        type="number"
-                        step="10"
-                        value={regInitialBalance}
-                        onChange={e => setRegInitialBalance(e.target.value)}
-                        className="w-full pl-7 pr-3 py-2 border border-neutral-300 rounded-lg font-mono"
-                      />
-                    </div>
-                  </div>
+                <div>
+                  <label className="block font-medium text-neutral-700 mb-1">
+                    Moneda Principal
+                  </label>
+                  <select
+                    value={regCurrency}
+                    onChange={e => setRegCurrency(e.target.value as CurrencyCode)}
+                    className="w-full px-2.5 py-2 border border-neutral-300 rounded-lg text-xs"
+                  >
+                    <option value="USD">USD ($) - Dólar Estadounidense</option>
+                    <option value="EUR">EUR (€) - Euro</option>
+                    <option value="COP">COP ($) - Peso Colombiano</option>
+                  </select>
+                  <p className="text-[11px] text-neutral-400 mt-1">
+                    Podrás configurar y registrar tus cuentas financieras en el dashboard tras iniciar sesión.
+                  </p>
                 </div>
 
                 <button

@@ -164,7 +164,24 @@ export const GoalsView: React.FC = () => {
       </div>
 
       {/* Grid de Metas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {goals.length === 0 ? (
+        <div className="p-8 text-center border-2 border-dashed border-neutral-200 rounded-2xl space-y-3 bg-neutral-50/50">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <Target className="w-6 h-6" />
+          </div>
+          <h3 className="text-sm font-bold text-neutral-900">Crea tu primera meta financiera</h3>
+          <p className="text-xs text-neutral-500 max-w-md mx-auto">
+            Define tus objetivos de ahorro (fondo de emergencia, vacaciones, compra de vehículo o vivienda) y proyecta tus aportes.
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg shadow-xs transition-colors"
+          >
+            + Crear primera meta
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {goals.map(goal => {
           const progress = FinancialEngine.calculateGoalProgress(goal);
           const convertedTarget = FinancialEngine.convertCurrency(goal.targetAmount, goal.currency, currency).convertedAmount;

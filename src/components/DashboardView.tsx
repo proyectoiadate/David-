@@ -228,7 +228,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
             </div>
 
             <div className="text-[11px] text-neutral-600 flex items-center justify-between pt-1">
-              <span>{breakdown.personal.accountCount} cuentas privadas (Efectivo & Ahorros)</span>
+              <span>{breakdown.personal.accountCount > 0 ? `${breakdown.personal.accountCount} cuentas privadas (Efectivo & Ahorros)` : 'Tu primera cuenta financiera aún no ha sido creada'}</span>
               <button
                 onClick={() => {
                   db.setActiveScope('PERSONAL');
@@ -236,7 +236,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                 }}
                 className="text-sky-700 hover:text-sky-900 font-semibold"
               >
-                Ver Cuentas →
+                {breakdown.personal.accountCount > 0 ? 'Ver Cuentas →' : '+ Crear cuenta'}
               </button>
             </div>
           </div>
@@ -281,7 +281,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
 
             {/* Aportes por miembro */}
             <div className="pt-1 text-[11px] text-neutral-600 flex items-center justify-between">
-              <span>Aportes: {breakdown.memberContributions.map(m => `${m.name.split(' ')[0]}: ${m.percentage}%`).join(' · ')}</span>
+              <span>
+                {breakdown.family.accountCount > 0 
+                  ? `Aportes: ${breakdown.memberContributions.length > 0 ? breakdown.memberContributions.map(m => `${m.name.split(' ')[0]}: ${m.percentage}%`).join(' · ') : 'Sin ingresos registrados'}`
+                  : 'Aún no hay cuentas familiares configuradas'}
+              </span>
               <button
                 onClick={() => {
                   db.setActiveScope('FAMILY');
@@ -289,7 +293,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                 }}
                 className="text-emerald-800 hover:text-emerald-950 font-semibold"
               >
-                Ver Presupuesto →
+                {breakdown.family.accountCount > 0 ? 'Ver Presupuesto →' : 'Configurar Hogar →'}
               </button>
             </div>
           </div>
@@ -308,10 +312,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
             {symbol}{totalLiquidAssets.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
           <div className="text-xs text-neutral-500 flex items-center justify-between">
-            <span>{accounts.length} cuentas activas</span>
-            <span className="font-semibold text-neutral-700">
-              {activeScope === 'PERSONAL' ? 'Solo Privadas' : activeScope === 'FAMILY' ? 'Solo Hogar' : 'Total 360°'}
-            </span>
+            <span>{accounts.length > 0 ? `${accounts.length} cuentas activas` : 'Tu primera cuenta aún no ha sido creada'}</span>
+            <button
+              onClick={() => onNavigate('accounts')}
+              className="font-semibold text-sky-700 hover:text-sky-900"
+            >
+              {accounts.length > 0 ? (activeScope === 'PERSONAL' ? 'Solo Privadas' : activeScope === 'FAMILY' ? 'Solo Hogar' : 'Total 360°') : '+ Crear cuenta'}
+            </button>
           </div>
         </div>
 
@@ -392,27 +399,45 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
               </div>
             </div>
 
-            <div className="pt-2 divide-y divide-neutral-100">
-              {budgets.slice(0, 3).map(b => {
-                const prog = FinancialEngine.calculateBudgetProgress(b, transactions);
-                return (
-                  <div key={b.id} className="py-2 flex items-center justify-between text-xs">
-                    <div>
-                      <p className="font-medium text-neutral-900">{b.name}</p>
-                      <span className="text-[10px] text-neutral-400 capitalize">{b.visibility.toLowerCase()}</span>
+            {budgets.length === 0 ? (
+              <div className="py-6 text-center space-y-2 border border-dashed border-neutral-200 rounded-xl bg-neutral-50/50">
+                <div className="w-9 h-9 mx-auto rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400">
+                  <Target className="w-4 h-4" />
+                </div>
+                <p className="text-xs font-semibold text-neutral-800">Crea tu primer presupuesto</p>
+                <p className="text-[11px] text-neutral-500 max-w-xs mx-auto">
+                  Establece techos de gasto mensuales para mantener el control de tus finanzas.
+                </p>
+                <button
+                  onClick={() => onNavigate('budgets')}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-900 pt-1"
+                >
+                  + Configurar Presupuesto
+                </button>
+              </div>
+            ) : (
+              <div className="pt-2 divide-y divide-neutral-100">
+                {budgets.slice(0, 3).map(b => {
+                  const prog = FinancialEngine.calculateBudgetProgress(b, transactions);
+                  return (
+                    <div key={b.id} className="py-2 flex items-center justify-between text-xs">
+                      <div>
+                        <p className="font-medium text-neutral-900">{b.name}</p>
+                        <span className="text-[10px] text-neutral-400 capitalize">{b.visibility.toLowerCase()}</span>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-mono font-semibold tabular-nums text-neutral-800">
+                          {symbol}{prog.spentAmount.toFixed(0)} / {symbol}{b.limitAmount.toFixed(0)}
+                        </p>
+                        <span className={`text-[10px] font-mono ${prog.isExceeded ? 'text-rose-600 font-bold' : 'text-neutral-400'}`}>
+                          {prog.usedPercent}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-mono font-semibold tabular-nums text-neutral-800">
-                        {symbol}{prog.spentAmount.toFixed(0)} / {symbol}{b.limitAmount.toFixed(0)}
-                      </p>
-                      <span className={`text-[10px] font-mono ${prog.isExceeded ? 'text-rose-600 font-bold' : 'text-neutral-400'}`}>
-                        {prog.usedPercent}%
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -431,20 +456,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           </div>
 
           <div className="space-y-2.5">
-            {[...upcomingCards, ...upcomingDebts].slice(0, 3).map((item, idx) => (
-              <div key={idx} className="p-3 bg-neutral-50 rounded-lg flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2.5">
-                  <Clock className="w-4 h-4 text-neutral-400 shrink-0" />
-                  <div>
-                    <p className="font-medium text-neutral-900">{item.title}</p>
-                    <p className="text-[11px] text-neutral-500">{item.due}</p>
+            {upcomingCards.length === 0 && upcomingDebts.length === 0 ? (
+              <div className="py-6 text-center space-y-2 border border-dashed border-neutral-200 rounded-xl bg-neutral-50/50">
+                <div className="w-9 h-9 mx-auto rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <p className="text-xs font-semibold text-neutral-800">Sin vencimientos pendientes</p>
+                <p className="text-[11px] text-neutral-500 max-w-xs mx-auto">
+                  No tienes deudas activas ni cuotas de tarjetas con vencimiento próximo.
+                </p>
+                <button
+                  onClick={() => onNavigate('debts')}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-700 hover:text-neutral-900 pt-1"
+                >
+                  Gestionar Deudas y Préstamos →
+                </button>
+              </div>
+            ) : (
+              [...upcomingCards, ...upcomingDebts].slice(0, 3).map((item, idx) => (
+                <div key={idx} className="p-3 bg-neutral-50 rounded-lg flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <Clock className="w-4 h-4 text-neutral-400 shrink-0" />
+                    <div>
+                      <p className="font-medium text-neutral-900">{item.title}</p>
+                      <p className="text-[11px] text-neutral-500">{item.due}</p>
+                    </div>
+                  </div>
+                  <div className="text-right font-mono font-semibold text-neutral-900">
+                    {symbol}{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </div>
                 </div>
-                <div className="text-right font-mono font-semibold text-neutral-900">
-                  {symbol}{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -463,32 +506,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           </div>
 
           <div className="space-y-3">
-            {goals.slice(0, 3).map(g => {
-              const prog = FinancialEngine.calculateGoalProgress(g);
-              return (
-                <div key={g.id} className="p-2.5 bg-neutral-50 rounded-lg text-xs space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="font-medium text-neutral-900">{g.name}</span>
-                      <span className="text-[10px] text-neutral-400 block capitalize">{g.visibility.toLowerCase()}</span>
-                    </div>
-                    <span className="font-mono tabular-nums font-semibold text-emerald-700">
-                      {prog.progressPercent}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-neutral-200 rounded-full h-1.5 overflow-hidden">
-                    <div 
-                      className="bg-emerald-600 h-full rounded-full transition-all"
-                      style={{ width: `${Math.min(100, prog.progressPercent)}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[11px] text-neutral-500">
-                    <span className="font-mono tabular-nums">{symbol}{g.currentAmount.toLocaleString()} / {symbol}{g.targetAmount.toLocaleString()}</span>
-                    <span>Proy: {prog.projectedCompletionMonths} meses</span>
-                  </div>
+            {goals.length === 0 ? (
+              <div className="py-6 text-center space-y-2 border border-dashed border-neutral-200 rounded-xl bg-neutral-50/50">
+                <div className="w-9 h-9 mx-auto rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400">
+                  <Target className="w-4 h-4" />
                 </div>
-              );
-            })}
+                <p className="text-xs font-semibold text-neutral-800">Crea tu primera meta financiera</p>
+                <p className="text-[11px] text-neutral-500 max-w-xs mx-auto">
+                  Fija objetivos de ahorro como fondo de emergencia, vacaciones o compras importantes.
+                </p>
+                <button
+                  onClick={() => onNavigate('goals')}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900 pt-1"
+                >
+                  + Nueva Meta de Ahorro
+                </button>
+              </div>
+            ) : (
+              goals.slice(0, 3).map(g => {
+                const prog = FinancialEngine.calculateGoalProgress(g);
+                return (
+                  <div key={g.id} className="p-2.5 bg-neutral-50 rounded-lg text-xs space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-medium text-neutral-900">{g.name}</span>
+                        <span className="text-[10px] text-neutral-400 block capitalize">{g.visibility.toLowerCase()}</span>
+                      </div>
+                      <span className="font-mono tabular-nums font-semibold text-emerald-700">
+                        {prog.progressPercent}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-neutral-200 rounded-full h-1.5 overflow-hidden">
+                      <div 
+                        className="bg-emerald-600 h-full rounded-full transition-all"
+                        style={{ width: `${Math.min(100, prog.progressPercent)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[11px] text-neutral-500">
+                      <span className="font-mono tabular-nums">{symbol}{g.currentAmount.toLocaleString()} / {symbol}{g.targetAmount.toLocaleString()}</span>
+                      <span>Proy: {prog.projectedCompletionMonths} meses</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>
@@ -513,44 +574,62 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           </div>
 
           <div className="divide-y divide-neutral-100">
-            {transactions.slice(0, 5).map(tx => {
-              const isIncome = tx.type === 'INCOME';
-              const converted = FinancialEngine.convertCurrency(tx.amount, tx.currency, currency, tx.exchangeRateUsed).convertedAmount;
-              return (
-                <div key={tx.id} className="py-3 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                      isIncome ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-700'
-                    }`}>
-                      {isIncome ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-neutral-900">{tx.description || tx.category}</p>
-                        <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${
-                          tx.visibility === 'PRIVATE' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'
-                        }`}>
-                          {tx.visibility === 'PRIVATE' ? 'Personal' : 'Familiar'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px] text-neutral-500 mt-0.5">
-                        <span>{tx.category}</span>
-                        <span aria-hidden="true">·</span>
-                        <span>{tx.date}</span>
-                        <span aria-hidden="true">·</span>
-                        <span className="capitalize">{tx.paymentMethod.replace('_', ' ').toLowerCase()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p className={`font-mono font-semibold tabular-nums ${isIncome ? 'text-emerald-700' : 'text-neutral-900'}`}>
-                      {isIncome ? '+' : '-'}{symbol}{converted.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
+            {transactions.length === 0 ? (
+              <div className="py-8 text-center space-y-2.5 border-2 border-dashed border-neutral-200 rounded-xl bg-neutral-50/40">
+                <div className="w-10 h-10 mx-auto rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400">
+                  <Wallet className="w-5 h-5" />
                 </div>
-              );
-            })}
+                <p className="text-xs font-semibold text-neutral-800">Aún no hay movimientos registrados</p>
+                <p className="text-[11px] text-neutral-500 max-w-sm mx-auto">
+                  Registra tu primer gasto o ingreso para empezar a dar seguimiento a tus finanzas y balances.
+                </p>
+                <button
+                  onClick={onOpenNewTransaction}
+                  className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg shadow-xs transition-colors"
+                >
+                  + Registrar primer gasto o ingreso
+                </button>
+              </div>
+            ) : (
+              transactions.slice(0, 5).map(tx => {
+                const isIncome = tx.type === 'INCOME';
+                const converted = FinancialEngine.convertCurrency(tx.amount, tx.currency, currency, tx.exchangeRateUsed).convertedAmount;
+                return (
+                  <div key={tx.id} className="py-3 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        isIncome ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-700'
+                      }`}>
+                        {isIncome ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-neutral-900">{tx.description || tx.category}</p>
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${
+                            tx.visibility === 'PRIVATE' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            {tx.visibility === 'PRIVATE' ? 'Personal' : 'Familiar'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-neutral-500 mt-0.5">
+                          <span>{tx.category}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{tx.date}</span>
+                          <span aria-hidden="true">·</span>
+                          <span className="capitalize">{tx.paymentMethod.replace('_', ' ').toLowerCase()}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <p className={`font-mono font-semibold tabular-nums ${isIncome ? 'text-emerald-700' : 'text-neutral-900'}`}>
+                        {isIncome ? '+' : '-'}{symbol}{converted.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
