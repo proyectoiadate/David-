@@ -284,6 +284,7 @@ export const GoalsView: React.FC = () => {
           );
         })}
       </div>
+      )}
 
       {/* Modal Nueva Meta */}
       {showModal && (

@@ -7,7 +7,8 @@ import {
   Calendar, 
   Percent, 
   CheckCircle,
-  Trash2
+  Trash2,
+  Wallet
 } from 'lucide-react';
 import { db } from '../services/database';
 import { FinancialEngine } from '../services/financialEngine';
